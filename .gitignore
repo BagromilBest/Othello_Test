@@ -1,0 +1,47 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+.env
+.venv
+env/
+venv/
+*.egg-info/
+instance/
+uploads/
+!.gitkeep
+
+# Logs
+*.log
+*.out
+
+# Node
+node_modules/
+dist/
+build/
+*.lock
+
+# Vite
+.vite/
+
+# Coverage / test
+.coverage
+htmlcov/
+pytest_cache/
+
+# Docker
+*.pid
+*.tar
+*.bak
+docker-data/
+.env.local
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
