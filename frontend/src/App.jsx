@@ -28,9 +28,14 @@ function App() {
 
   const startGame = (config) => {
     // Store config in sessionStorage so GameView can access it
-    sessionStorage.setItem('matchConfig', JSON.stringify(config));
-    setGameState('playing');
-    // WebSocket connection will be established in GameView
+    try {
+      sessionStorage.setItem('matchConfig', JSON.stringify(config));
+      setGameState('playing');
+      // WebSocket connection will be established in GameView
+    } catch (error) {
+      console.error('Failed to store game config:', error);
+      alert('Failed to start game. Please try again.');
+    }
   };
 
   const returnToMenu = () => {
