@@ -63,7 +63,7 @@ class Match:
             game_over=self.game_over,
             winner=self.winner,
             message=self.message,
-            bot_thinking_time_ms=self.bot_thinking_time_ms
+            bot_thinking_time_ms=self.bot_thinking_time_ms,
             last_move=self.last_move,
             last_flipped=self.last_flipped
         )
@@ -85,7 +85,6 @@ class Match:
         # Reset bot thinking time when a human makes a move
         self.bot_thinking_time_ms = None
         
-        self.rules.make_move(row, col, self.current_player)
         success, flipped = self.rules.make_move(row, col, self.current_player)
         
         if success:
