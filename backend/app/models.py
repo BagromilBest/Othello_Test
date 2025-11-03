@@ -38,3 +38,4 @@ class GameState(BaseModel):
     game_over: bool
     winner: Optional[int] = None  # 0 = black, 1 = white, -1 = draw
     message: Optional[str] = None
+    bot_thinking_time_ms: Optional[float] = None  # Time taken by bot to make last move in milliseconds

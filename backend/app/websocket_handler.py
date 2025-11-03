@@ -22,6 +22,7 @@ class Match:
         self.game_over = False
         self.winner: Optional[int] = None
         self.message: Optional[str] = None
+        self.bot_thinking_time_ms: Optional[float] = None
 
         # Bot instances
         self.black_bot = None
@@ -59,7 +60,8 @@ class Match:
             valid_moves=valid_moves,
             game_over=self.game_over,
             winner=self.winner,
-            message=self.message
+            message=self.message,
+            bot_thinking_time_ms=self.bot_thinking_time_ms
         )
 
     def make_move(self, row: int, col: int) -> tuple[bool, Optional[str]]:
@@ -76,6 +78,9 @@ class Match:
         if not self.rules.is_valid_move(row, col, self.current_player):
             return False, f"Invalid move: ({row}, {col})"
 
+        # Reset bot thinking time when a human makes a move
+        self.bot_thinking_time_ms = None
+        
         self.rules.make_move(row, col, self.current_player)
 
         # Switch player and check game state
@@ -100,8 +105,11 @@ class Match:
         if bot is None:
             return False, "No bot configured for current player"
 
-        # Execute bot move
-        move, error = bot_manager.execute_bot_move(bot, self.board.get_board(), bot_name)
+        # Execute bot move and capture execution time
+        move, error, execution_time_ms = bot_manager.execute_bot_move(bot, self.board.get_board(), bot_name)
+
+        # Store the bot thinking time
+        self.bot_thinking_time_ms = execution_time_ms
 
         if error:
             # Bot made an error - they lose

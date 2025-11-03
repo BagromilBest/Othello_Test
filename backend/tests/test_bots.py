@@ -118,11 +118,13 @@ def test_bot_move_execution():
     board = [[-1, -1], [-1, -1]]
 
     # Execute move
-    move, error = manager.execute_bot_move(bot_instance, board, "exec_bot")
+    move, error, execution_time_ms = manager.execute_bot_move(bot_instance, board, "exec_bot")
 
     assert error is None
     assert move is not None
     assert len(move) == 2
+    assert execution_time_ms is not None
+    assert execution_time_ms >= 0
 
     # Clean up
     if os.path.exists(metadata.file_path):
@@ -147,7 +149,7 @@ class BadBot:
     bot_instance = bot_class(Board.BLACK, Board.WHITE)
 
     board = [[-1, -1], [-1, -1]]
-    move, error = manager.execute_bot_move(bot_instance, board, "bad_bot")
+    move, error, execution_time_ms = manager.execute_bot_move(bot_instance, board, "bad_bot")
 
     assert move is None
     assert error is not None
