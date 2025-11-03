@@ -4,6 +4,7 @@ import json
 import importlib.util
 import subprocess
 import sys
+import time
 from typing import Optional
 from datetime import datetime
 from .models import BotMetadata
@@ -179,8 +180,6 @@ class BotManager:
             error_message: Error description or None if successful
             execution_time_ms: Time taken to execute select_move in milliseconds or None if error
         """
-        import time
-        
         try:
             # For now, call directly with timeout
             # TODO: Implement subprocess-based execution for better isolation
