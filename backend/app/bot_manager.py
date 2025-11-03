@@ -183,6 +183,12 @@ class BotManager:
         new_filename = f"{new_name}.py"
         new_path = os.path.join(self.UPLOADED_BOTS_DIR, new_filename)
 
+        # Ensure the new path is within the uploads directory (security check)
+        new_path_absolute = os.path.abspath(new_path)
+        uploads_dir_absolute = os.path.abspath(self.UPLOADED_BOTS_DIR)
+        if not new_path_absolute.startswith(uploads_dir_absolute + os.sep):
+            raise ValueError("Invalid bot name: path traversal detected")
+
         if os.path.exists(old_path):
             os.rename(old_path, new_path)
 
