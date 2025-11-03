@@ -60,6 +60,10 @@ def test_make_move():
     # Black plays at (2, 3)
     success, flipped = rules.make_move(2, 3, Board.BLACK)
     assert success
+    
+    # Check that flipped pieces list is correct
+    assert (3, 3) in flipped  # The white piece that was flipped
+    assert len(flipped) == 1  # Only one piece should be flipped
 
     # Check that piece was placed
     assert board.get_piece(2, 3) == Board.BLACK
