@@ -116,6 +116,78 @@ class BotManager:
 
         return metadata
 
+    def delete_bot(self, bot_name: str) -> None:
+        """
+        Delete a bot.
+
+        Args:
+            bot_name: Name of the bot to delete
+
+        Raises:
+            ValueError: If bot not found or is builtin
+        """
+        if bot_name not in self.metadata:
+            raise ValueError(f"Bot '{bot_name}' not found")
+
+        metadata = self.metadata[bot_name]
+
+        # Cannot delete builtin bots
+        if metadata.type == "builtin":
+            raise ValueError(f"Cannot delete builtin bot '{bot_name}'")
+
+        # Delete the file
+        if os.path.exists(metadata.file_path):
+            os.remove(metadata.file_path)
+
+        # Remove from metadata
+        del self.metadata[bot_name]
+        self._save_metadata()
+
+    def rename_bot(self, old_name: str, new_name: str) -> BotMetadata:
+        """
+        Rename a bot.
+
+        Args:
+            old_name: Current bot name
+            new_name: New bot name
+
+        Returns:
+            Updated BotMetadata
+
+        Raises:
+            ValueError: If bot not found, is builtin, or new name already exists
+        """
+        if old_name not in self.metadata:
+            raise ValueError(f"Bot '{old_name}' not found")
+
+        if new_name in self.metadata:
+            raise ValueError(f"Bot '{new_name}' already exists")
+
+        metadata = self.metadata[old_name]
+
+        # Cannot rename builtin bots
+        if metadata.type == "builtin":
+            raise ValueError(f"Cannot rename builtin bot '{old_name}'")
+
+        # Rename the file
+        old_path = metadata.file_path
+        new_filename = f"{new_name}.py"
+        new_path = os.path.join(self.UPLOADED_BOTS_DIR, new_filename)
+
+        if os.path.exists(old_path):
+            os.rename(old_path, new_path)
+
+        # Update metadata
+        metadata.name = new_name
+        metadata.file_path = new_path
+
+        # Move in metadata dict
+        del self.metadata[old_name]
+        self.metadata[new_name] = metadata
+        self._save_metadata()
+
+        return metadata
+
     def load_bot_class(self, bot_name: str):
         """
         Dynamically load a bot class.

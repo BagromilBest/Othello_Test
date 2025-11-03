@@ -8,6 +8,11 @@ const MainMenu = ({ bots, onStartGame, onBotsUpdated, apiUrl }) => {
   const [whiteBotName, setWhiteBotName] = useState('');
   const [uploadError, setUploadError] = useState('');
   const [uploadSuccess, setUploadSuccess] = useState('');
+  const [showManageBots, setShowManageBots] = useState(false);
+  const [editingBot, setEditingBot] = useState(null);
+  const [newBotName, setNewBotName] = useState('');
+  const [manageError, setManageError] = useState('');
+  const [manageSuccess, setManageSuccess] = useState('');
 
   const handleFileUpload = async (event) => {
     const file = event.target.files[0];
@@ -36,6 +41,74 @@ const MainMenu = ({ bots, onStartGame, onBotsUpdated, apiUrl }) => {
       }
     } catch (error) {
       setUploadError('Network error during upload');
+    }
+  };
+
+  const handleDeleteBot = async (botName) => {
+    if (!window.confirm(`Are you sure you want to delete bot "${botName}"?`)) {
+      return;
+    }
+
+    setManageError('');
+    setManageSuccess('');
+
+    try {
+      const response = await fetch(`${apiUrl}/api/bots/${encodeURIComponent(botName)}`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        setManageSuccess(`Bot "${botName}" deleted successfully!`);
+        onBotsUpdated();
+      } else {
+        const error = await response.json();
+        setManageError(error.detail || 'Delete failed');
+      }
+    } catch (error) {
+      setManageError('Network error during delete');
+    }
+  };
+
+  const handleStartRename = (bot) => {
+    setEditingBot(bot.name);
+    setNewBotName(bot.name);
+    setManageError('');
+    setManageSuccess('');
+  };
+
+  const handleCancelRename = () => {
+    setEditingBot(null);
+    setNewBotName('');
+  };
+
+  const handleSaveRename = async (oldName) => {
+    if (!newBotName || newBotName === oldName) {
+      setEditingBot(null);
+      return;
+    }
+
+    setManageError('');
+    setManageSuccess('');
+
+    try {
+      const response = await fetch(
+        `${apiUrl}/api/bots/${encodeURIComponent(oldName)}/rename?new_name=${encodeURIComponent(newBotName)}`,
+        {
+          method: 'PUT',
+        }
+      );
+
+      if (response.ok) {
+        setManageSuccess(`Bot renamed to "${newBotName}" successfully!`);
+        setEditingBot(null);
+        setNewBotName('');
+        onBotsUpdated();
+      } else {
+        const error = await response.json();
+        setManageError(error.detail || 'Rename failed');
+      }
+    } catch (error) {
+      setManageError('Network error during rename');
     }
   };
 
@@ -198,7 +271,15 @@ const MainMenu = ({ bots, onStartGame, onBotsUpdated, apiUrl }) => {
       {/* Available Bots List */}
       {bots.length > 0 && (
         <div className="card mt-6">
-          <h3 className="text-xl font-semibold mb-4">Available Bots</h3>
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-xl font-semibold">Available Bots</h3>
+            <button
+              onClick={() => setShowManageBots(true)}
+              className="btn-primary px-4 py-2 text-sm"
+            >
+              Manage Bots
+            </button>
+          </div>
           <div className="grid gap-2">
             {bots.map((bot) => (
               <div
@@ -212,6 +293,97 @@ const MainMenu = ({ bots, onStartGame, onBotsUpdated, apiUrl }) => {
                 </span>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* Manage Bots Modal */}
+      {showManageBots && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-surface-dark rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-2xl font-semibold">Manage Bots</h3>
+              <button
+                onClick={() => {
+                  setShowManageBots(false);
+                  setEditingBot(null);
+                  setManageError('');
+                  setManageSuccess('');
+                }}
+                className="text-gray-400 hover:text-white text-2xl"
+              >
+                ×
+              </button>
+            </div>
+
+            {manageError && (
+              <p className="mb-3 text-sm text-red-400">{manageError}</p>
+            )}
+            {manageSuccess && (
+              <p className="mb-3 text-sm text-green-400">{manageSuccess}</p>
+            )}
+
+            <div className="grid gap-3">
+              {bots.map((bot) => (
+                <div
+                  key={bot.name}
+                  className="bg-surface rounded p-4"
+                >
+                  {editingBot === bot.name ? (
+                    <div className="flex gap-2 items-center">
+                      <input
+                        type="text"
+                        value={newBotName}
+                        onChange={(e) => setNewBotName(e.target.value)}
+                        className="flex-1 bg-surface-lighter rounded px-3 py-2 text-white"
+                        placeholder="New bot name"
+                      />
+                      <button
+                        onClick={() => handleSaveRename(bot.name)}
+                        className="btn-primary px-4 py-2"
+                      >
+                        Save
+                      </button>
+                      <button
+                        onClick={handleCancelRename}
+                        className="bg-surface-lighter hover:bg-surface px-4 py-2 rounded"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <div className="font-medium">{bot.name}</div>
+                        <div className="text-sm text-gray-400">
+                          {bot.type}
+                          {bot.upload_time && ` • ${new Date(bot.upload_time).toLocaleDateString()}`}
+                        </div>
+                      </div>
+                      {bot.type === 'uploaded' && (
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => handleStartRename(bot)}
+                            className="bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded text-sm"
+                          >
+                            Rename
+                          </button>
+                          <button
+                            onClick={() => handleDeleteBot(bot.name)}
+                            className="bg-red-600 hover:bg-red-700 px-3 py-1 rounded text-sm"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      )}
+                      {bot.type === 'builtin' && (
+                        <span className="text-xs text-gray-500 italic">Built-in</span>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       )}
