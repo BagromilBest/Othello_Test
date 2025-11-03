@@ -165,6 +165,10 @@ class BotManager:
         if not new_name:
             raise ValueError("New bot name cannot be empty")
 
+        # Prevent path traversal attacks
+        if '/' in new_name or '\\' in new_name or '..' in new_name:
+            raise ValueError("Bot name cannot contain path separators or '..'")
+
         if new_name in self.metadata:
             raise ValueError(f"Bot '{new_name}' already exists")
 
