@@ -23,6 +23,8 @@ class Match:
         self.winner: Optional[int] = None
         self.message: Optional[str] = None
         self.bot_thinking_time_ms: Optional[float] = None
+        self.last_move: Optional[tuple[int, int]] = None
+        self.last_flipped: Optional[list[tuple[int, int]]] = None
 
         # Bot instances
         self.black_bot = None
@@ -62,6 +64,8 @@ class Match:
             winner=self.winner,
             message=self.message,
             bot_thinking_time_ms=self.bot_thinking_time_ms
+            last_move=self.last_move,
+            last_flipped=self.last_flipped
         )
 
     def make_move(self, row: int, col: int) -> tuple[bool, Optional[str]]:
@@ -82,6 +86,12 @@ class Match:
         self.bot_thinking_time_ms = None
         
         self.rules.make_move(row, col, self.current_player)
+        success, flipped = self.rules.make_move(row, col, self.current_player)
+        
+        if success:
+            # Track last move and flipped pieces
+            self.last_move = (row, col)
+            self.last_flipped = flipped
 
         # Switch player and check game state
         self._advance_turn()
@@ -129,7 +139,13 @@ class Match:
             return False, self.message
 
         # Make the move
-        self.rules.make_move(row, col, self.current_player)
+        success, flipped = self.rules.make_move(row, col, self.current_player)
+        
+        if success:
+            # Track last move and flipped pieces
+            self.last_move = (row, col)
+            self.last_flipped = flipped
+            
         self._advance_turn()
 
         return True, None
