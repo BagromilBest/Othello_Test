@@ -103,7 +103,7 @@ class OthelloRules:
 
         return False
 
-    def make_move(self, row: int, col: int, color: int) -> bool:
+    def make_move(self, row: int, col: int, color: int) -> tuple[bool, list[tuple[int, int]]]:
         """
         Make a move and flip appropriate pieces.
 
@@ -113,25 +113,29 @@ class OthelloRules:
             color: Player color
 
         Returns:
-            True if the move was valid and made, False otherwise
+            Tuple of (success, flipped_pieces)
+            - success: True if the move was valid and made, False otherwise
+            - flipped_pieces: List of (row, col) tuples of pieces that were flipped
         """
         if not self.is_valid_move(row, col, color):
-            return False
+            return False, []
 
         # Place the piece
         self.board.set_piece(row, col, color)
 
-        # Flip pieces in all directions
+        # Flip pieces in all directions and collect all flipped positions
         opponent_color = 1 - color
+        all_flipped = []
 
         for dr, dc in self.DIRECTIONS:
             if self._would_flip_in_direction(row, col, dr, dc, color, opponent_color):
-                self._flip_pieces_in_direction(row, col, dr, dc, color, opponent_color)
+                flipped = self._flip_pieces_in_direction(row, col, dr, dc, color, opponent_color)
+                all_flipped.extend(flipped)
 
-        return True
+        return True, all_flipped
 
     def _flip_pieces_in_direction(self, row: int, col: int, dr: int, dc: int,
-                                  color: int, opponent_color: int):
+                                  color: int, opponent_color: int) -> list[tuple[int, int]]:
         """
         Flip opponent pieces in a specific direction.
 
@@ -140,6 +144,9 @@ class OthelloRules:
             dr, dc: Direction vector
             color: Player color
             opponent_color: Opponent color
+
+        Returns:
+            List of (row, col) tuples of pieces that were flipped
         """
         r, c = row + dr, col + dc
         pieces_to_flip = []
@@ -153,12 +160,14 @@ class OthelloRules:
                 # Flip all collected pieces
                 for flip_r, flip_c in pieces_to_flip:
                     self.board.set_piece(flip_r, flip_c, color)
-                break
+                return pieces_to_flip
             else:
                 break
 
             r += dr
             c += dc
+
+        return []
 
     def is_game_over(self) -> tuple[bool, int]:
         """

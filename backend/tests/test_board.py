@@ -58,7 +58,7 @@ def test_make_move():
     rules = OthelloRules(board)
 
     # Black plays at (2, 3)
-    success = rules.make_move(2, 3, Board.BLACK)
+    success, flipped = rules.make_move(2, 3, Board.BLACK)
     assert success
 
     # Check that piece was placed
@@ -79,11 +79,11 @@ def test_invalid_move():
     rules = OthelloRules(board)
 
     # Try to place on occupied square
-    success = rules.make_move(3, 3, Board.BLACK)
+    success, flipped = rules.make_move(3, 3, Board.BLACK)
     assert not success
 
     # Try to place on invalid position
-    success = rules.make_move(0, 0, Board.BLACK)
+    success, flipped = rules.make_move(0, 0, Board.BLACK)
     assert not success
 
 

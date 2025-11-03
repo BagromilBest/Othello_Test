@@ -1,6 +1,6 @@
 import React from 'react';
 
-const Board = ({ board, validMoves, onCellClick, gameOver, currentPlayerType }) => {
+const Board = ({ board, validMoves, onCellClick, gameOver, currentPlayerType, lastMove, lastFlipped }) => {
   const size = board.length;
 
   // Calculate cell size based on board size
@@ -17,9 +17,32 @@ const Board = ({ board, validMoves, onCellClick, gameOver, currentPlayerType }) 
     return validMoves.some(([r, c]) => r === row && c === col);
   };
 
+  const isLastMove = (row, col) => {
+    return lastMove && lastMove[0] === row && lastMove[1] === col;
+  };
+
+  const isLastFlipped = (row, col) => {
+    return lastFlipped && lastFlipped.some(([r, c]) => r === row && c === col);
+  };
+
   const renderCell = (row, col) => {
     const piece = board[row][col];
     const valid = !gameOver && currentPlayerType === 'human' && isValidMove(row, col);
+    const isLast = isLastMove(row, col);
+    const isFlipped = isLastFlipped(row, col);
+
+    // Determine background color based on highlighting
+    let bgColor = 'bg-green-800';
+    if (piece !== -1) {
+      bgColor = 'bg-green-700';
+    }
+    if (isLast) {
+      // Subtle yellow tint for last move
+      bgColor = piece === -1 ? 'bg-yellow-900' : 'bg-yellow-800';
+    } else if (isFlipped) {
+      // Subtle blue tint for flipped pieces
+      bgColor = 'bg-blue-900';
+    }
 
     return (
       <div
@@ -29,7 +52,7 @@ const Board = ({ board, validMoves, onCellClick, gameOver, currentPlayerType }) 
           border border-surface-lighter
           flex items-center justify-center
           ${valid ? 'cursor-pointer hover:bg-surface-lighter' : ''}
-          ${piece === -1 ? 'bg-green-800' : 'bg-green-700'}
+          ${bgColor}
           transition-colors duration-200
           relative
         `}

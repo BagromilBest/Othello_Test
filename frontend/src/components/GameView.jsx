@@ -216,6 +216,8 @@ const GameView = ({ onReturnToMenu, wsUrl }) => {
           onCellClick={handleCellClick}
           gameOver={gameState.game_over}
           currentPlayerType={currentPlayerType}
+          lastMove={gameState.last_move}
+          lastFlipped={gameState.last_flipped}
         />
       </div>
 
