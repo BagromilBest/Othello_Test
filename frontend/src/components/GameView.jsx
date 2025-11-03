@@ -189,9 +189,16 @@ const GameView = ({ onReturnToMenu, wsUrl }) => {
             )}
           </p>
           {!gameState.game_over && (
-            <p className="text-xs text-gray-500 mt-2">
-              Valid moves: {gameState.valid_moves.length}
-            </p>
+            <>
+              <p className="text-xs text-gray-500 mt-2">
+                Valid moves: {gameState.valid_moves.length}
+              </p>
+              {gameState.bot_thinking_time_ms != null && (
+                <p className="text-xs text-blue-400 mt-1">
+                  Bot thinking: {gameState.bot_thinking_time_ms.toFixed(2)}ms
+                </p>
+              )}
+            </>
           )}
         </div>
 

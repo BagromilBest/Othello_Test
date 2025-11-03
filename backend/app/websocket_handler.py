@@ -22,6 +22,7 @@ class Match:
         self.game_over = False
         self.winner: Optional[int] = None
         self.message: Optional[str] = None
+        self.bot_thinking_time_ms: Optional[float] = None
         self.last_move: Optional[tuple[int, int]] = None
         self.last_flipped: Optional[list[tuple[int, int]]] = None
 
@@ -62,6 +63,7 @@ class Match:
             game_over=self.game_over,
             winner=self.winner,
             message=self.message,
+            bot_thinking_time_ms=self.bot_thinking_time_ms
             last_move=self.last_move,
             last_flipped=self.last_flipped
         )
@@ -80,6 +82,10 @@ class Match:
         if not self.rules.is_valid_move(row, col, self.current_player):
             return False, f"Invalid move: ({row}, {col})"
 
+        # Reset bot thinking time when a human makes a move
+        self.bot_thinking_time_ms = None
+        
+        self.rules.make_move(row, col, self.current_player)
         success, flipped = self.rules.make_move(row, col, self.current_player)
         
         if success:
@@ -109,8 +115,11 @@ class Match:
         if bot is None:
             return False, "No bot configured for current player"
 
-        # Execute bot move
-        move, error = bot_manager.execute_bot_move(bot, self.board.get_board(), bot_name)
+        # Execute bot move and capture execution time
+        move, error, execution_time_ms = bot_manager.execute_bot_move(bot, self.board.get_board(), bot_name)
+
+        # Store the bot thinking time
+        self.bot_thinking_time_ms = execution_time_ms
 
         if error:
             # Bot made an error - they lose

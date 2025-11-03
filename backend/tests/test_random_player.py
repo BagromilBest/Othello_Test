@@ -40,7 +40,7 @@ def test_random_player_makes_moves():
     board_state = board.get_board()
     
     # Execute move
-    move, error = manager.execute_bot_move(bot, board_state, "random_player")
+    move, error, execution_time_ms = manager.execute_bot_move(bot, board_state, "random_player")
     
     assert error is None, f"Bot should not error: {error}"
     assert move is not None
@@ -48,6 +48,8 @@ def test_random_player_makes_moves():
     assert len(move) == 2
     assert isinstance(move[0], int)
     assert isinstance(move[1], int)
+    assert execution_time_ms is not None
+    assert execution_time_ms >= 0
 
 
 def test_random_player_interface():

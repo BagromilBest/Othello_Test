@@ -4,6 +4,7 @@ import json
 import importlib.util
 import subprocess
 import sys
+import time
 from typing import Optional
 from datetime import datetime
 from .models import BotMetadata
@@ -160,7 +161,7 @@ class BotManager:
         return bot_class
 
     def execute_bot_move(self, bot_instance, board: list[list[int]],
-                         bot_name: str) -> tuple[Optional[tuple[int, int]], Optional[str]]:
+                         bot_name: str) -> tuple[Optional[tuple[int, int]], Optional[str], Optional[float]]:
         """
         Execute a bot's move with timeout and error handling.
 
@@ -174,9 +175,10 @@ class BotManager:
             bot_name: Name of the bot (for error messages)
 
         Returns:
-            Tuple of (move, error_message)
+            Tuple of (move, error_message, execution_time_ms)
             move: (row, col) tuple or None if error
             error_message: Error description or None if successful
+            execution_time_ms: Time taken to execute select_move in milliseconds or None if error
         """
         try:
             # For now, call directly with timeout
@@ -192,25 +194,28 @@ class BotManager:
                 signal.alarm(int(self.BOT_TIMEOUT))
 
             try:
+                start_time = time.perf_counter()
                 move = bot_instance.select_move(board)
+                end_time = time.perf_counter()
+                execution_time_ms = (end_time - start_time) * 1000  # Convert to milliseconds
             finally:
                 if hasattr(signal, 'SIGALRM'):
                     signal.alarm(0)  # Cancel the alarm
 
             # Validate move format
             if not isinstance(move, tuple) or len(move) != 2:
-                return None, f"Bot '{bot_name}' returned invalid move format"
+                return None, f"Bot '{bot_name}' returned invalid move format", None
 
             row, col = move
             if not isinstance(row, int) or not isinstance(col, int):
-                return None, f"Bot '{bot_name}' returned non-integer coordinates"
+                return None, f"Bot '{bot_name}' returned non-integer coordinates", None
 
-            return (row, col), None
+            return (row, col), None, execution_time_ms
 
         except TimeoutError:
-            return None, f"Bot '{bot_name}' exceeded {self.BOT_TIMEOUT}s time limit"
+            return None, f"Bot '{bot_name}' exceeded {self.BOT_TIMEOUT}s time limit", None
         except Exception as e:
-            return None, f"Bot '{bot_name}' raised error: {str(e)}"
+            return None, f"Bot '{bot_name}' raised error: {str(e)}", None
 
 
 # Global bot manager instance
