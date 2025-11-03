@@ -82,7 +82,8 @@ const MainMenu = ({ bots, onStartGame, onBotsUpdated, apiUrl }) => {
   };
 
   const handleSaveRename = async (oldName) => {
-    if (!newBotName || newBotName === oldName) {
+    const trimmedName = newBotName.trim();
+    if (!trimmedName || trimmedName === oldName) {
       setEditingBot(null);
       return;
     }
@@ -92,14 +93,18 @@ const MainMenu = ({ bots, onStartGame, onBotsUpdated, apiUrl }) => {
 
     try {
       const response = await fetch(
-        `${apiUrl}/api/bots/${encodeURIComponent(oldName)}/rename?new_name=${encodeURIComponent(newBotName)}`,
+        `${apiUrl}/api/bots/${encodeURIComponent(oldName)}/rename`,
         {
           method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ new_name: trimmedName }),
         }
       );
 
       if (response.ok) {
-        setManageSuccess(`Bot renamed to "${newBotName}" successfully!`);
+        setManageSuccess(`Bot renamed to "${trimmedName}" successfully!`);
         setEditingBot(null);
         setNewBotName('');
         onBotsUpdated();
@@ -335,8 +340,17 @@ const MainMenu = ({ bots, onStartGame, onBotsUpdated, apiUrl }) => {
                         type="text"
                         value={newBotName}
                         onChange={(e) => setNewBotName(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            handleSaveRename(bot.name);
+                          } else if (e.key === 'Escape') {
+                            handleCancelRename();
+                          }
+                        }}
                         className="flex-1 bg-surface-lighter rounded px-3 py-2 text-white"
                         placeholder="New bot name"
+                        aria-label="New bot name"
+                        autoFocus
                       />
                       <button
                         onClick={() => handleSaveRename(bot.name)}

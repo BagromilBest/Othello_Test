@@ -160,6 +160,11 @@ class BotManager:
         if old_name not in self.metadata:
             raise ValueError(f"Bot '{old_name}' not found")
 
+        # Trim and validate new name
+        new_name = new_name.strip()
+        if not new_name:
+            raise ValueError("New bot name cannot be empty")
+
         if new_name in self.metadata:
             raise ValueError(f"Bot '{new_name}' already exists")
 

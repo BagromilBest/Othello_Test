@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from typing import Optional
 import asyncio
 
-from .models import MatchConfig, BotMetadata, GameState
+from .models import MatchConfig, BotMetadata, GameState, RenameBotRequest
 from .bot_manager import bot_manager
 from .websocket_handler import manager
 
@@ -75,13 +75,13 @@ async def delete_bot(bot_name: str):
 
 
 @app.put("/api/bots/{bot_name}/rename", response_model=BotMetadata)
-async def rename_bot(bot_name: str, new_name: str):
+async def rename_bot(bot_name: str, request: RenameBotRequest):
     """
     Rename a bot.
 
     Args:
         bot_name: Current bot name
-        new_name: New bot name
+        request: Request body containing new_name
 
     Returns:
         Updated BotMetadata
@@ -90,7 +90,7 @@ async def rename_bot(bot_name: str, new_name: str):
         HTTPException: If bot not found, is builtin, or new name already exists
     """
     try:
-        metadata = bot_manager.rename_bot(bot_name, new_name)
+        metadata = bot_manager.rename_bot(bot_name, request.new_name)
         return metadata
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
