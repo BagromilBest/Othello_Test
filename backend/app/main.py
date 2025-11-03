@@ -53,6 +53,49 @@ async def upload_bot(file: UploadFile = File(...)):
         raise HTTPException(status_code=400, detail=str(e))
 
 
+@app.delete("/api/bots/{bot_name}")
+async def delete_bot(bot_name: str):
+    """
+    Delete a bot.
+
+    Args:
+        bot_name: Name of the bot to delete
+
+    Returns:
+        Success message
+
+    Raises:
+        HTTPException: If bot not found or is builtin
+    """
+    try:
+        bot_manager.delete_bot(bot_name)
+        return {"message": f"Bot '{bot_name}' deleted successfully"}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.put("/api/bots/{bot_name}/rename", response_model=BotMetadata)
+async def rename_bot(bot_name: str, new_name: str):
+    """
+    Rename a bot.
+
+    Args:
+        bot_name: Current bot name
+        new_name: New bot name
+
+    Returns:
+        Updated BotMetadata
+
+    Raises:
+        HTTPException: If bot not found, is builtin, or new name already exists
+    """
+    try:
+        metadata = bot_manager.rename_bot(bot_name, new_name)
+        return metadata
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
 @app.websocket("/ws/{client_id}")
 async def websocket_endpoint(websocket: WebSocket, client_id: str):
     """
