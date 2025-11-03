@@ -88,4 +88,3 @@ class RandomPlayer:
                 c += dc
 
         return False
-# Example random bot
