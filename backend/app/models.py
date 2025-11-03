@@ -38,3 +38,5 @@ class GameState(BaseModel):
     game_over: bool
     winner: Optional[int] = None  # 0 = black, 1 = white, -1 = draw
     message: Optional[str] = None
+    last_move: Optional[tuple[int, int]] = None  # Position of last move
+    last_flipped: Optional[list[tuple[int, int]]] = None  # Positions of stones flipped by last move
