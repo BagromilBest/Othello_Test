@@ -2,8 +2,36 @@ import React, { useState, useEffect } from 'react';
 import MainMenu from './components/MainMenu';
 import GameView from './components/GameView';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-const WS_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:8000';
+// Determine API and WebSocket URLs dynamically
+// In production (served by nginx), use the current host with proxied paths
+// In development, use environment variables or localhost
+const getApiUrl = () => {
+  if (import.meta.env.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL;
+  }
+  // In production, use relative URLs (nginx will proxy to backend)
+  if (import.meta.env.PROD) {
+    return `${window.location.protocol}//${window.location.host}`;
+  }
+  // In development, use localhost
+  return 'http://localhost:8000';
+};
+
+const getWsUrl = () => {
+  if (import.meta.env.VITE_WS_URL) {
+    return import.meta.env.VITE_WS_URL;
+  }
+  // In production, use relative WebSocket URL (nginx will proxy to backend)
+  if (import.meta.env.PROD) {
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    return `${protocol}//${window.location.host}`;
+  }
+  // In development, use localhost
+  return 'ws://localhost:8000';
+};
+
+const API_URL = getApiUrl();
+const WS_URL = getWsUrl();
 
 function App() {
   const [gameState, setGameState] = useState('menu'); // 'menu' | 'playing'
