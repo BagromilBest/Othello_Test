@@ -1,5 +1,5 @@
 """Main FastAPI application"""
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, UploadFile, File, HTTPException
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, UploadFile, File, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from typing import Optional
 import asyncio
@@ -33,21 +33,34 @@ async def list_bots():
 
 
 @app.post("/api/bots/upload", response_model=BotMetadata)
-async def upload_bot(file: UploadFile = File(...)):
+async def upload_bot(request: Request, file: UploadFile = File(...)):
     """
-    Upload a new bot file.
+    Upload a new bot file with security validation.
 
     The bot must be a Python file with a class implementing:
     - __init__(self, my_color: int, opp_color: int)
     - select_move(self, board: list[list[int]]) -> tuple[int, int]
+    
+    Security checks:
+    - File must be a valid Python file (.py extension)
+    - Only allowed imports (random, typing, time, math, etc.)
+    - No dangerous imports (os, sys, subprocess, etc.)
+    - No dangerous function calls or attributes
     """
     if not file.filename:
         raise HTTPException(status_code=400, detail="No filename provided")
 
     content = await file.read()
 
+    # Gather request information for security logging
+    request_info = {
+        "ip": request.client.host if request.client else "unknown",
+        "user_agent": request.headers.get("user-agent", "unknown"),
+        "timestamp": None  # Will be set by security logger
+    }
+
     try:
-        metadata = bot_manager.upload_bot(file.filename, content)
+        metadata = bot_manager.upload_bot(file.filename, content, request_info)
         return metadata
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -94,6 +107,21 @@ async def rename_bot(bot_name: str, request: RenameBotRequest):
         return metadata
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.get("/api/security/logs")
+async def get_security_logs(limit: Optional[int] = 50):
+    """
+    Get security logs of flagged bot uploads.
+    
+    Args:
+        limit: Maximum number of log entries to return (default: 50)
+    
+    Returns:
+        List of security log entries
+    """
+    from .bot_security import security_logger
+    return security_logger.get_security_log(limit=limit)
 
 
 @app.websocket("/ws/{client_id}")
