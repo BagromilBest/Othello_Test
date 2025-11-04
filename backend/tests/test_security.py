@@ -1,4 +1,5 @@
 """Tests for bot security validation"""
+import os
 import pytest
 from app.bot_security import BotSecurityValidator, SecurityLogger
 
@@ -253,7 +254,6 @@ class TestSecurityLogger:
     def test_log_security_event(self, tmp_path):
         """Test logging a security event"""
         # Use a temporary directory
-        import os
         original_dir = SecurityLogger.QUARANTINE_DIR
         original_log = SecurityLogger.SECURITY_LOG_FILE
         
@@ -299,7 +299,6 @@ class TestSecurityLogger:
     
     def test_get_security_log_limit(self, tmp_path):
         """Test limiting the number of log entries returned"""
-        import os
         original_dir = SecurityLogger.QUARANTINE_DIR
         original_log = SecurityLogger.SECURITY_LOG_FILE
         

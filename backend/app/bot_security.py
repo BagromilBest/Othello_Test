@@ -45,8 +45,7 @@ class BotSecurityValidator:
         'os', 'sys', 'subprocess', 'shutil', 'glob', 'pathlib',
         'requests', 'urllib', 'http', 'socket', 'socketserver',
         'pickle', 'shelve', 'marshal', 'tempfile', 'io',
-        'importlib', 'runpy', '__import__', 'eval', 'exec',
-        'compile', 'open', 'input', 'file', 'execfile',
+        'importlib', 'runpy',
         'ctypes', 'multiprocessing', 'threading', 'asyncio',
         'webbrowser', 'platform', 'site', 'pty', 'pwd', 'grp',
         'resource', 'signal', 'codecs', 'builtins', '__builtin__'
