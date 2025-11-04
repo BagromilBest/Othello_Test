@@ -158,3 +158,56 @@ class BadBot:
     # Clean up
     if os.path.exists(metadata.file_path):
         os.remove(metadata.file_path)
+
+
+def test_scan_uploaded_bots_directory():
+    """Test that manually placed bots in uploads directory are detected"""
+    manager = BotManager()
+    
+    # Create a bot file directly in uploads directory (not via upload API)
+    manual_bot_code = '''
+class ManualBot:
+    def __init__(self, my_color: int, opp_color: int):
+        self.my_color = my_color
+        self.opp_color = opp_color
+
+    def select_move(self, board):
+        return (0, 0)
+'''
+    
+    manual_bot_path = os.path.join(manager.UPLOADED_BOTS_DIR, "scanned_bot.py")
+    with open(manual_bot_path, 'w') as f:
+        f.write(manual_bot_code)
+    
+    try:
+        # Create a new manager instance to trigger scanning
+        new_manager = BotManager()
+        bots = new_manager.list_bots()
+        
+        # Find the manually placed bot
+        scanned_bot = next((bot for bot in bots if bot.name == "scanned_bot"), None)
+        
+        assert scanned_bot is not None, "Manually placed bot should be detected"
+        assert scanned_bot.type == "uploaded", "Manually placed bot should be type 'uploaded'"
+        assert scanned_bot.file_path == manual_bot_path
+        
+    finally:
+        # Clean up
+        if os.path.exists(manual_bot_path):
+            os.remove(manual_bot_path)
+
+
+def test_builtin_bots_cannot_be_deleted():
+    """Test that builtin bots cannot be deleted"""
+    manager = BotManager()
+    
+    # Verify random_player is available as builtin
+    bots = manager.list_bots()
+    random_player = next((bot for bot in bots if bot.name == "random_player"), None)
+    
+    assert random_player is not None
+    assert random_player.type == "builtin"
+    
+    # Try to delete builtin bot
+    with pytest.raises(ValueError, match="Cannot delete builtin bot"):
+        manager.delete_bot("random_player")
