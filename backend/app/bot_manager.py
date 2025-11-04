@@ -88,7 +88,17 @@ class BotManager:
                     )
 
     def _scan_uploaded_bots(self):
-        """Scan the uploads directory for manually placed bot files"""
+        """
+        Scan the uploads directory for bot files without metadata.
+        
+        This handles two scenarios:
+        1. Bot files manually placed in uploads directory (not uploaded via API)
+        2. Bot files whose metadata was lost (e.g., metadata file was deleted/corrupted)
+        
+        In both cases, we treat them as 'uploaded' type bots, which can be deleted.
+        The stale metadata cleanup runs before this, so if a bot file exists here
+        without metadata, it's either new or recovered from metadata loss.
+        """
         if not os.path.exists(self.UPLOADED_BOTS_DIR):
             return
 
@@ -96,7 +106,7 @@ class BotManager:
             if filename.endswith('.py') and not filename.startswith('_'):
                 bot_name = filename[:-3]  # Remove .py extension
                 if bot_name not in self.metadata:
-                    # This is a manually placed bot, not uploaded via API
+                    # Bot file exists but has no metadata - treat as uploaded
                     self.metadata[bot_name] = BotMetadata(
                         name=bot_name,
                         type="uploaded",
