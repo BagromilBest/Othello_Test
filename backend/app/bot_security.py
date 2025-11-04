@@ -232,6 +232,9 @@ class SecurityLogger:
             request_info: Information about the request (IP, user agent, etc.)
             file_content: Content of the flagged file
         """
+        # Ensure directories exist (in case paths were changed for testing)
+        self._ensure_directories()
+        
         timestamp = datetime.now(UTC).isoformat()
         
         # Save the flagged file to quarantine
