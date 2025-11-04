@@ -5,9 +5,10 @@ import importlib.util
 import subprocess
 import sys
 import time
-from typing import Optional
-from datetime import datetime
+from typing import Optional, Tuple, List
+from datetime import datetime, UTC
 from .models import BotMetadata
+from .bot_security import security_validator, security_logger, SecurityViolation
 
 
 class BotManager:
@@ -117,19 +118,20 @@ class BotManager:
         """Get list of all available bots"""
         return list(self.metadata.values())
 
-    def upload_bot(self, filename: str, content: bytes) -> BotMetadata:
+    def upload_bot(self, filename: str, content: bytes, request_info: Optional[dict] = None) -> BotMetadata:
         """
-        Save an uploaded bot file.
+        Save an uploaded bot file with security validation.
 
         Args:
             filename: Name of the bot file
             content: File content as bytes
+            request_info: Optional request information for security logging (IP, user agent, etc.)
 
         Returns:
             BotMetadata for the uploaded bot
 
         Raises:
-            ValueError: If filename is invalid or bot already exists
+            ValueError: If filename is invalid, bot already exists, or security validation fails
         """
         if not filename.endswith('.py'):
             raise ValueError("Bot file must be a Python file (.py)")
@@ -140,6 +142,36 @@ class BotManager:
         if bot_name in self.metadata:
             raise ValueError(f"Bot '{bot_name}' already exists")
 
+        # Security validation: decode content and validate code
+        try:
+            code_str = content.decode('utf-8')
+        except UnicodeDecodeError:
+            raise ValueError("Bot file must be valid UTF-8 encoded text")
+        
+        # Validate the code for security issues
+        is_valid, violations = security_validator.validate(code_str, filename)
+        
+        if not is_valid:
+            # Log security event and quarantine the file
+            if request_info is None:
+                request_info = {}
+            
+            security_logger.log_security_event(
+                filename=filename,
+                violations=violations,
+                request_info=request_info,
+                file_content=content
+            )
+            
+            # Build detailed error message
+            error_parts = ["Security validation failed. The following issues were found:"]
+            for i, violation in enumerate(violations, 1):
+                error_parts.append(f"\n{i}. {violation.description}")
+                if violation.line_number:
+                    error_parts.append(f"   Line {violation.line_number}: {violation.code_snippet}")
+            
+            raise ValueError('\n'.join(error_parts))
+
         # Save the file
         file_path = os.path.join(self.UPLOADED_BOTS_DIR, filename)
         with open(file_path, 'wb') as f:
@@ -149,7 +181,7 @@ class BotManager:
         metadata = BotMetadata(
             name=bot_name,
             type="uploaded",
-            upload_time=datetime.utcnow().isoformat(),
+            upload_time=datetime.now(UTC).isoformat(),
             file_path=file_path
         )
 
