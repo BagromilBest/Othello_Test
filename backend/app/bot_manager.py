@@ -23,7 +23,23 @@ class BotManager:
         self.metadata: dict[str, BotMetadata] = {}
         self._ensure_directories()
         self._load_metadata()
+        self._cleanup_stale_metadata()
         self._scan_builtin_bots()
+        self._scan_uploaded_bots()
+
+    def _cleanup_stale_metadata(self):
+        """Remove metadata entries for bots whose files no longer exist"""
+        stale_bots = []
+        for bot_name, metadata in self.metadata.items():
+            if not os.path.exists(metadata.file_path):
+                stale_bots.append(bot_name)
+        
+        for bot_name in stale_bots:
+            del self.metadata[bot_name]
+        
+        # Save if we removed any stale entries
+        if stale_bots:
+            self._save_metadata()
 
     def _ensure_directories(self):
         """Create necessary directories if they don't exist"""
@@ -69,6 +85,22 @@ class BotManager:
                         name=bot_name,
                         type="builtin",
                         file_path=os.path.join(self.BUILTIN_BOTS_DIR, filename)
+                    )
+
+    def _scan_uploaded_bots(self):
+        """Scan the uploads directory for manually placed bot files"""
+        if not os.path.exists(self.UPLOADED_BOTS_DIR):
+            return
+
+        for filename in os.listdir(self.UPLOADED_BOTS_DIR):
+            if filename.endswith('.py') and not filename.startswith('_'):
+                bot_name = filename[:-3]  # Remove .py extension
+                if bot_name not in self.metadata:
+                    # This is a manually placed bot, not uploaded via API
+                    self.metadata[bot_name] = BotMetadata(
+                        name=bot_name,
+                        type="uploaded",
+                        file_path=os.path.join(self.UPLOADED_BOTS_DIR, filename)
                     )
 
     def list_bots(self) -> list[BotMetadata]:
