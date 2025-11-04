@@ -266,3 +266,29 @@ def test_invalid_utf8_rejected():
     
     error_msg = str(exc_info.value)
     assert "utf-8" in error_msg.lower() or "encoding" in error_msg.lower()
+
+
+def test_utf8_bom_accepted():
+    """Test that files with UTF-8 BOM (Byte Order Mark) are accepted"""
+    # UTF-8 BOM is the byte sequence EF BB BF (U+FEFF)
+    bot_code_with_bom = b'\xef\xbb\xbf' + b"""import random
+
+class BomBot:
+    def __init__(self, my_color: int, opp_color: int):
+        self.my_color = my_color
+        self.opp_color = opp_color
+    
+    def select_move(self, board):
+        return (0, 0)
+"""
+    
+    # This should succeed - BOM should be stripped automatically
+    metadata = bot_manager.upload_bot("bom_bot.py", bot_code_with_bom)
+    assert metadata.name == "bom_bot"
+    
+    # Clean up
+    if os.path.exists(metadata.file_path):
+        os.remove(metadata.file_path)
+        if "bom_bot" in bot_manager.metadata:
+            del bot_manager.metadata["bom_bot"]
+            bot_manager._save_metadata()

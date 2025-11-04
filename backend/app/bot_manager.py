@@ -143,8 +143,9 @@ class BotManager:
             raise ValueError(f"Bot '{bot_name}' already exists")
 
         # Security validation: decode content and validate code
+        # Use 'utf-8-sig' to automatically handle BOM (Byte Order Mark) if present
         try:
-            code_str = content.decode('utf-8')
+            code_str = content.decode('utf-8-sig')
         except UnicodeDecodeError:
             raise ValueError("Bot file must be valid UTF-8 encoded text")
         
