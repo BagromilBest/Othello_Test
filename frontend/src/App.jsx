@@ -3,13 +3,13 @@ import MainMenu from './components/MainMenu';
 import GameView from './components/GameView';
 
 // Determine API and WebSocket URLs dynamically
-// In production (served by nginx), use the current host with proxied paths
+// In production (served by nginx), use the current host (nginx will proxy to backend)
 // In development, use environment variables or localhost
 const getApiUrl = () => {
   if (import.meta.env.VITE_API_URL) {
     return import.meta.env.VITE_API_URL;
   }
-  // In production, use relative URLs (nginx will proxy to backend)
+  // In production, construct URL using current host (nginx will proxy to backend)
   if (import.meta.env.PROD) {
     return `${window.location.protocol}//${window.location.host}`;
   }
@@ -21,7 +21,7 @@ const getWsUrl = () => {
   if (import.meta.env.VITE_WS_URL) {
     return import.meta.env.VITE_WS_URL;
   }
-  // In production, use relative WebSocket URL (nginx will proxy to backend)
+  // In production, construct WebSocket URL using current host (nginx will proxy to backend)
   if (import.meta.env.PROD) {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     return `${protocol}//${window.location.host}`;
