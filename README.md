@@ -36,6 +36,11 @@ A full-stack web application for playing Othello (Reversi) with support for huma
    - Frontend: http://localhost
    - Backend API: http://localhost:8000
    - API Documentation: http://localhost:8000/docs
+   
+   **Network Access**: The application can be accessed from other devices on the same network:
+   - Find your machine's IP address (e.g., `192.168.1.100`)
+   - Access from other devices: `http://<your-ip-address>` (e.g., `http://192.168.1.100`)
+   - The frontend automatically connects to the backend using the same host
 
 4. **Stop the application**
    ```bash
@@ -85,9 +90,17 @@ A full-stack web application for playing Othello (Reversi) with support for huma
    ```
 
 3. **Create environment file** (optional)
+   
+   For local development:
    ```bash
    echo "VITE_API_URL=http://localhost:8000" > .env
    echo "VITE_WS_URL=ws://localhost:8000" >> .env
+   ```
+   
+   For network access during development (replace with your IP):
+   ```bash
+   echo "VITE_API_URL=http://192.168.1.100:8000" > .env
+   echo "VITE_WS_URL=ws://192.168.1.100:8000" >> .env
    ```
 
 4. **Run development server**
@@ -328,6 +341,13 @@ container = client.containers.run(
 - Verify backend is running on port 8000
 - Check CORS settings in `backend/app/main.py`
 - Ensure WebSocket URL is correct (check browser console)
+
+### Cannot access from other devices on network
+- Ensure both frontend (port 80) and backend (port 8000) are accessible
+- Check firewall settings on the host machine
+- Verify you're using the correct IP address of the host machine
+- In production (Docker), the app automatically uses the current host
+- In development, set environment variables with your machine's IP address
 
 ### Bot upload fails
 - File must have `.py` extension
