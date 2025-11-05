@@ -6,6 +6,8 @@ const MainMenu = ({ bots, onStartGame, onBotsUpdated, apiUrl }) => {
   const [blackBotName, setBlackBotName] = useState('');
   const [whitePlayerType, setWhitePlayerType] = useState('bot');
   const [whiteBotName, setWhiteBotName] = useState('');
+  const [initTimeout, setInitTimeout] = useState(60);
+  const [moveTimeout, setMoveTimeout] = useState(1);
   const [uploadError, setUploadError] = useState('');
   const [uploadSuccess, setUploadSuccess] = useState('');
   const [showManageBots, setShowManageBots] = useState(false);
@@ -134,6 +136,8 @@ const MainMenu = ({ bots, onStartGame, onBotsUpdated, apiUrl }) => {
       black_bot_name: blackPlayerType === 'bot' ? blackBotName : null,
       white_player_type: whitePlayerType,
       white_bot_name: whitePlayerType === 'bot' ? whiteBotName : null,
+      init_timeout: initTimeout,
+      move_timeout: moveTimeout,
     };
 
     onStartGame(config);
@@ -160,6 +164,39 @@ const MainMenu = ({ bots, onStartGame, onBotsUpdated, apiUrl }) => {
           <div className="flex justify-between text-xs text-gray-400 mt-1">
             <span>4×4</span>
             <span>100×100</span>
+          </div>
+        </div>
+
+        {/* Timeout Settings */}
+        <div className="grid md:grid-cols-2 gap-4 mb-6">
+          <div>
+            <label className="block text-sm font-medium mb-2">
+              Bot Initialization Timeout (seconds)
+            </label>
+            <input
+              type="number"
+              min="1"
+              max="300"
+              value={initTimeout}
+              onChange={(e) => setInitTimeout(parseFloat(e.target.value) || 60)}
+              className="w-full bg-surface-lighter rounded px-3 py-2 text-white"
+            />
+            <p className="text-xs text-gray-400 mt-1">Default: 60s</p>
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-2">
+              Bot Move Timeout (seconds)
+            </label>
+            <input
+              type="number"
+              min="0.1"
+              max="60"
+              step="0.1"
+              value={moveTimeout}
+              onChange={(e) => setMoveTimeout(parseFloat(e.target.value) || 1)}
+              className="w-full bg-surface-lighter rounded px-3 py-2 text-white"
+            />
+            <p className="text-xs text-gray-400 mt-1">Default: 1s</p>
           </div>
         </div>
 

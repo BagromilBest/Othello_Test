@@ -169,6 +169,11 @@ const GameView = ({ onReturnToMenu, wsUrl }) => {
           <p className="text-sm text-gray-400 mt-1">
             {matchConfig?.black_player_type === 'human' ? 'Human' : matchConfig?.black_bot_name}
           </p>
+          {gameState.black_init_time_ms != null && matchConfig?.black_player_type === 'bot' && (
+            <p className="text-xs text-green-400 mt-1">
+              Init: {gameState.black_init_time_ms.toFixed(2)}ms
+            </p>
+          )}
         </div>
 
         {/* Status */}
@@ -212,6 +217,11 @@ const GameView = ({ onReturnToMenu, wsUrl }) => {
           <p className="text-sm text-gray-400 mt-1">
             {matchConfig?.white_player_type === 'human' ? 'Human' : matchConfig?.white_bot_name}
           </p>
+          {gameState.white_init_time_ms != null && matchConfig?.white_player_type === 'bot' && (
+            <p className="text-xs text-green-400 mt-1">
+              Init: {gameState.white_init_time_ms.toFixed(2)}ms
+            </p>
+          )}
         </div>
       </div>
 

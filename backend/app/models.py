@@ -19,6 +19,8 @@ class MatchConfig(BaseModel):
     black_bot_name: Optional[str] = None
     white_player_type: Literal["human", "bot"]
     white_bot_name: Optional[str] = None
+    init_timeout: float = Field(default=60.0, gt=0, description="Bot initialization timeout in seconds")
+    move_timeout: float = Field(default=1.0, gt=0, description="Bot move timeout in seconds")
 
 
 class MoveRequest(BaseModel):
@@ -41,6 +43,8 @@ class GameState(BaseModel):
     bot_thinking_time_ms: Optional[float] = None  # Time taken by bot to make last move in milliseconds
     last_move: Optional[tuple[int, int]] = None  # Position of last move
     last_flipped: Optional[list[tuple[int, int]]] = None  # Positions of stones flipped by last move
+    black_init_time_ms: Optional[float] = None  # Time taken by black bot to initialize in milliseconds
+    white_init_time_ms: Optional[float] = None  # Time taken by white bot to initialize in milliseconds
 
 
 class RenameBotRequest(BaseModel):
