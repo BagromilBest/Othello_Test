@@ -200,7 +200,10 @@ const GameView = ({ onReturnToMenu, wsUrl }) => {
               </p>
               {gameState.bot_thinking_time_ms != null && (
                 <p className="text-xs text-blue-400 mt-1">
-                  Bot thinking: {gameState.bot_thinking_time_ms.toFixed(2)}ms
+                  {currentPlayerType === 'human' 
+                    ? 'Human' 
+                    : (gameState.current_player === 0 ? matchConfig?.black_bot_name : matchConfig?.white_bot_name)
+                  } thinking: {gameState.bot_thinking_time_ms.toFixed(2)}ms
                 </p>
               )}
             </>
