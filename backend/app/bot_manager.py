@@ -401,12 +401,25 @@ class BotManager:
             # TODO: Implement subprocess-based execution for better isolation
             import signal
 
-            def timeout_handler(signum, frame):
-                raise TimeoutError("Bot exceeded time limit")
+            exceeded_timeout = False
+            hard_timeout_hit = False
+            
+            def soft_timeout_handler(signum, frame):
+                nonlocal exceeded_timeout
+                exceeded_timeout = True
+                # Don't raise, just flag that timeout was exceeded
+                # Set a new alarm for hard timeout (up to 4x the original timeout)
+                signal.signal(signal.SIGALRM, hard_timeout_handler)
+                signal.alarm(math.ceil(timeout * 3))  # Additional 3x time
+
+            def hard_timeout_handler(signum, frame):
+                nonlocal hard_timeout_hit
+                hard_timeout_hit = True
+                raise TimeoutError(f"Bot exceeded maximum time limit")
 
             # Set up timeout (Unix-like systems only)
             if hasattr(signal, 'SIGALRM'):
-                signal.signal(signal.SIGALRM, timeout_handler)
+                signal.signal(signal.SIGALRM, soft_timeout_handler)
                 signal.alarm(math.ceil(timeout))
 
             try:
@@ -420,16 +433,22 @@ class BotManager:
 
             # Validate move format
             if not isinstance(move, tuple) or len(move) != 2:
-                return None, f"Bot '{bot_name}' returned invalid move format", None
+                return None, f"Bot '{bot_name}' returned invalid move format", execution_time_ms if exceeded_timeout else None
 
             row, col = move
             if not isinstance(row, int) or not isinstance(col, int):
-                return None, f"Bot '{bot_name}' returned non-integer coordinates", None
+                return None, f"Bot '{bot_name}' returned non-integer coordinates", execution_time_ms if exceeded_timeout else None
 
+            # If timeout was exceeded, return the move but with a warning message
+            if exceeded_timeout:
+                warning = f"Bot '{bot_name}' exceeded {timeout}s time limit (took {execution_time_ms:.2f}ms)"
+                return (row, col), warning, execution_time_ms
+            
             return (row, col), None, execution_time_ms
 
         except TimeoutError:
-            return None, f"Bot '{bot_name}' exceeded {timeout}s time limit", None
+            # This happens if the bot takes more than 4x the timeout
+            return None, f"Bot '{bot_name}' exceeded maximum time limit ({timeout * 4}s)", None
         except Exception as e:
             return None, f"Bot '{bot_name}' raised error: {str(e)}", None
 
