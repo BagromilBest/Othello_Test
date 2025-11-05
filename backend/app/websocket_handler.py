@@ -25,6 +25,8 @@ class Match:
         self.bot_thinking_time_ms: Optional[float] = None
         self.last_move: Optional[tuple[int, int]] = None
         self.last_flipped: Optional[list[tuple[int, int]]] = None
+        self.black_init_time_ms: Optional[float] = None
+        self.white_init_time_ms: Optional[float] = None
 
         # Bot instances
         self.black_bot = None
@@ -38,16 +40,38 @@ class Match:
         if self.config.black_player_type == "bot" and self.config.black_bot_name:
             try:
                 bot_class = bot_manager.load_bot_class(self.config.black_bot_name)
-                self.black_bot = bot_class(Board.BLACK, Board.WHITE)
+                self.black_bot, error, init_time_ms = bot_manager.initialize_bot(
+                    bot_class, Board.BLACK, Board.WHITE, 
+                    self.config.black_bot_name, self.config.init_timeout
+                )
+                if error:
+                    self.game_over = True
+                    self.winner = Board.WHITE
+                    self.message = error
+                else:
+                    self.black_init_time_ms = init_time_ms
             except Exception as e:
-                print(f"Error loading black bot: {e}")
+                self.game_over = True
+                self.winner = Board.WHITE
+                self.message = f"Error loading black bot: {e}"
 
         if self.config.white_player_type == "bot" and self.config.white_bot_name:
             try:
                 bot_class = bot_manager.load_bot_class(self.config.white_bot_name)
-                self.white_bot = bot_class(Board.WHITE, Board.BLACK)
+                self.white_bot, error, init_time_ms = bot_manager.initialize_bot(
+                    bot_class, Board.WHITE, Board.BLACK, 
+                    self.config.white_bot_name, self.config.init_timeout
+                )
+                if error:
+                    self.game_over = True
+                    self.winner = Board.BLACK
+                    self.message = error
+                else:
+                    self.white_init_time_ms = init_time_ms
             except Exception as e:
-                print(f"Error loading white bot: {e}")
+                self.game_over = True
+                self.winner = Board.BLACK
+                self.message = f"Error loading white bot: {e}"
 
     def get_state(self) -> GameState:
         """Get current game state"""
@@ -65,7 +89,9 @@ class Match:
             message=self.message,
             bot_thinking_time_ms=self.bot_thinking_time_ms,
             last_move=self.last_move,
-            last_flipped=self.last_flipped
+            last_flipped=self.last_flipped,
+            black_init_time_ms=self.black_init_time_ms,
+            white_init_time_ms=self.white_init_time_ms
         )
 
     def make_move(self, row: int, col: int) -> tuple[bool, Optional[str]]:
@@ -115,7 +141,9 @@ class Match:
             return False, "No bot configured for current player"
 
         # Execute bot move and capture execution time
-        move, error, execution_time_ms = bot_manager.execute_bot_move(bot, self.board.get_board(), bot_name)
+        move, error, execution_time_ms = bot_manager.execute_bot_move(
+            bot, self.board.get_board(), bot_name, self.config.move_timeout
+        )
 
         # Store the bot thinking time
         self.bot_thinking_time_ms = execution_time_ms

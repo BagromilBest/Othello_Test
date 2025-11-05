@@ -17,7 +17,8 @@ class BotManager:
     BUILTIN_BOTS_DIR = "app/bots"
     UPLOADED_BOTS_DIR = "uploads"
     METADATA_FILE = "uploads/bots_metadata.json"
-    BOT_TIMEOUT = 2.0  # 2 seconds per move
+    DEFAULT_MOVE_TIMEOUT = 1.0  # 1 second per move (changed from 2.0)
+    DEFAULT_INIT_TIMEOUT = 60.0  # 60 seconds for initialization
 
     def __init__(self):
         """Initialize the bot manager"""
@@ -322,8 +323,56 @@ class BotManager:
 
         return bot_class
 
+    def initialize_bot(self, bot_class, my_color: int, opp_color: int, 
+                       bot_name: str, timeout: float = None) -> tuple[Optional[object], Optional[str], Optional[float]]:
+        """
+        Initialize a bot instance with timeout.
+
+        Args:
+            bot_class: The bot class to instantiate
+            my_color: The bot's color (0 or 1)
+            opp_color: The opponent's color (0 or 1)
+            bot_name: Name of the bot (for error messages)
+            timeout: Timeout in seconds (defaults to DEFAULT_INIT_TIMEOUT)
+
+        Returns:
+            Tuple of (bot_instance, error_message, init_time_ms)
+            bot_instance: The initialized bot or None if error
+            error_message: Error description or None if successful
+            init_time_ms: Time taken to initialize in milliseconds or None if error
+        """
+        if timeout is None:
+            timeout = self.DEFAULT_INIT_TIMEOUT
+
+        try:
+            import signal
+
+            def timeout_handler(signum, frame):
+                raise TimeoutError("Bot initialization exceeded time limit")
+
+            # Set up timeout (Unix-like systems only)
+            if hasattr(signal, 'SIGALRM'):
+                signal.signal(signal.SIGALRM, timeout_handler)
+                signal.alarm(int(timeout))
+
+            try:
+                start_time = time.perf_counter()
+                bot_instance = bot_class(my_color, opp_color)
+                end_time = time.perf_counter()
+                init_time_ms = (end_time - start_time) * 1000  # Convert to milliseconds
+            finally:
+                if hasattr(signal, 'SIGALRM'):
+                    signal.alarm(0)  # Cancel the alarm
+
+            return bot_instance, None, init_time_ms
+
+        except TimeoutError:
+            return None, f"Bot '{bot_name}' initialization exceeded {timeout}s time limit", None
+        except Exception as e:
+            return None, f"Bot '{bot_name}' raised error during initialization: {str(e)}", None
+
     def execute_bot_move(self, bot_instance, board: list[list[int]],
-                         bot_name: str) -> tuple[Optional[tuple[int, int]], Optional[str], Optional[float]]:
+                         bot_name: str, timeout: float = None) -> tuple[Optional[tuple[int, int]], Optional[str], Optional[float]]:
         """
         Execute a bot's move with timeout and error handling.
 
@@ -335,6 +384,7 @@ class BotManager:
             bot_instance: The bot instance
             board: Current board state
             bot_name: Name of the bot (for error messages)
+            timeout: Timeout in seconds (defaults to DEFAULT_MOVE_TIMEOUT)
 
         Returns:
             Tuple of (move, error_message, execution_time_ms)
@@ -342,6 +392,9 @@ class BotManager:
             error_message: Error description or None if successful
             execution_time_ms: Time taken to execute select_move in milliseconds or None if error
         """
+        if timeout is None:
+            timeout = self.DEFAULT_MOVE_TIMEOUT
+
         try:
             # For now, call directly with timeout
             # TODO: Implement subprocess-based execution for better isolation
@@ -353,7 +406,7 @@ class BotManager:
             # Set up timeout (Unix-like systems only)
             if hasattr(signal, 'SIGALRM'):
                 signal.signal(signal.SIGALRM, timeout_handler)
-                signal.alarm(int(self.BOT_TIMEOUT))
+                signal.alarm(int(timeout))
 
             try:
                 start_time = time.perf_counter()
@@ -375,7 +428,7 @@ class BotManager:
             return (row, col), None, execution_time_ms
 
         except TimeoutError:
-            return None, f"Bot '{bot_name}' exceeded {self.BOT_TIMEOUT}s time limit", None
+            return None, f"Bot '{bot_name}' exceeded {timeout}s time limit", None
         except Exception as e:
             return None, f"Bot '{bot_name}' raised error: {str(e)}", None
 
