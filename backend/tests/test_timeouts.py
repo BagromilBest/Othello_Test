@@ -79,7 +79,7 @@ def test_bot_move_with_custom_timeout():
 
 
 def test_bot_move_timeout():
-    """Test bot move timeout"""
+    """Test bot move timeout - bot should finish within 4x timeout and return move with warning"""
     class TimeoutMoveBot:
         def __init__(self, my_color, opp_color):
             self.my_color = my_color
@@ -96,9 +96,36 @@ def test_bot_move_timeout():
         bot, board, "timeout_bot", timeout=1.0
     )
     
+    # Bot should complete within 4x timeout (4 seconds), so it should return a move
+    assert move is not None
+    assert error is not None  # But there should be a warning message
+    assert "exceeded" in error.lower()
+    assert exec_time_ms is not None  # And we should have execution time
+    assert exec_time_ms >= 2000  # At least 2 seconds (2000ms)
+
+
+def test_bot_move_hard_timeout():
+    """Test bot move exceeds maximum timeout (4x limit)"""
+    class VerySlowBot:
+        def __init__(self, my_color, opp_color):
+            self.my_color = my_color
+            self.opp_color = opp_color
+        
+        def select_move(self, board):
+            time.sleep(10)  # Sleep for 10 seconds (way over 4x timeout)
+            return (0, 0)
+    
+    bot = VerySlowBot(0, 1)
+    board = [[-1, -1], [-1, -1]]
+    
+    move, error, exec_time_ms = bot_manager.execute_bot_move(
+        bot, board, "very_slow_bot", timeout=1.0
+    )
+    
+    # Bot should be terminated after 4x timeout (4 seconds)
     assert move is None
     assert error is not None
-    assert "exceeded" in error.lower()
+    assert "maximum time limit" in error.lower()
     assert exec_time_ms is None
 
 

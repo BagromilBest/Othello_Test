@@ -177,13 +177,41 @@ class MyPlayer:
     # ---------- Public API ----------
     def select_move(self, board: List[List[int]]) -> Tuple[int, int]:
         """Return (row, col) for the next move, same format as RandomPlayer."""
+        import time as time_module
+        
         black, white = self._board_to_bits(board)
         player, opp = (black, white) if self.is_black else (white, black)
 
+        # Time limit: 1 second
+        time_limit = 1.0
+        start_time = time_module.perf_counter()
+        
         empties = 64 - (black | white).bit_count()
-        depth = 8 if empties <= 12 else 6 if empties <= 20 else self.max_depth
-        self.tt.clear()
-        best_move_bit = self._search_root(player, opp, depth)
+        
+        # Iterative deepening with time management
+        best_move_bit = None
+        max_depth = 8 if empties <= 12 else 6 if empties <= 20 else self.max_depth
+        
+        for depth in range(1, max_depth + 1):
+            # Check if we have time left
+            elapsed = time_module.perf_counter() - start_time
+            if elapsed >= time_limit * 0.8:  # Use 80% of time limit as safety margin
+                break
+                
+            self.tt.clear()
+            try:
+                current_move = self._search_root(player, opp, depth)
+                if current_move is not None:
+                    best_move_bit = current_move
+            except:
+                # If anything goes wrong, use the best move we have so far
+                break
+                
+            # Check time again after search
+            elapsed = time_module.perf_counter() - start_time
+            if elapsed >= time_limit * 0.9:  # Stop if we're at 90% of time
+                break
+        
         if best_move_bit is None:
             # No legal move — return a random empty square (to match RandomPlayer behavior)
             for r in range(8):

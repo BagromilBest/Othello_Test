@@ -148,12 +148,19 @@ class Match:
         # Store the bot thinking time
         self.bot_thinking_time_ms = execution_time_ms
 
+        # Check if there's an error/warning message
         if error:
-            # Bot made an error - they lose
-            self.game_over = True
-            self.winner = 1 - self.current_player
-            self.message = error
-            return False, error
+            # If we have a valid move despite the error, it's just a warning (timeout exceeded)
+            if move is not None:
+                # This is a timeout warning - continue with the move but log the warning
+                # The warning will be passed back but we don't end the game
+                pass
+            else:
+                # This is a fatal error - bot loses
+                self.game_over = True
+                self.winner = 1 - self.current_player
+                self.message = error
+                return False, error
 
         row, col = move
 
@@ -172,7 +179,6 @@ class Match:
             # Track last move and flipped pieces
             self.last_move = (row, col)
             self.last_flipped = flipped
-            
         self._advance_turn()
 
         return True, None
