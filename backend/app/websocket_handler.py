@@ -27,6 +27,7 @@ class Match:
         self.last_flipped: Optional[list[tuple[int, int]]] = None
         self.black_init_time_ms: Optional[float] = None
         self.white_init_time_ms: Optional[float] = None
+        self.turn_start_time: Optional[float] = None  # Track when current turn started
 
         # Bot instances
         self.black_bot = None
@@ -34,6 +35,10 @@ class Match:
 
         # Initialize bots if needed
         self._initialize_bots()
+        
+        # Start tracking time for first turn
+        import time
+        self.turn_start_time = time.perf_counter()
 
     def _initialize_bots(self):
         """Initialize bot players"""
@@ -108,8 +113,13 @@ class Match:
         if not self.rules.is_valid_move(row, col, self.current_player):
             return False, f"Invalid move: ({row}, {col})"
 
-        # Reset bot thinking time when a human makes a move
-        self.bot_thinking_time_ms = None
+        # Calculate human thinking time
+        import time
+        if self.turn_start_time is not None:
+            thinking_time_ms = (time.perf_counter() - self.turn_start_time) * 1000
+            self.bot_thinking_time_ms = thinking_time_ms
+        else:
+            self.bot_thinking_time_ms = None
         
         success, flipped = self.rules.make_move(row, col, self.current_player)
         
@@ -120,6 +130,9 @@ class Match:
 
         # Switch player and check game state
         self._advance_turn()
+        
+        # Reset turn start time for next player
+        self.turn_start_time = time.perf_counter()
 
         return True, None
 
@@ -150,10 +163,16 @@ class Match:
 
         # Check if there's an error/warning message
         if error:
-            # If we have a valid move despite the error, it's just a warning (timeout exceeded)
-            if move is not None:
-                # This is a timeout warning - continue with the move but log the warning
-                # The warning will be passed back but we don't end the game
+            # If we have a valid move despite the error, it means timeout was exceeded
+            # Bot loses in this case, but we still have the move and execution time
+            if move is not None and "lost:" in error and "time limit" in error:
+                # This is a timeout - bot loses
+                self.game_over = True
+                self.winner = 1 - self.current_player
+                self.message = error
+                return False, error
+            elif move is not None:
+                # Other type of error with a move - shouldn't happen, but handle it
                 pass
             else:
                 # This is a fatal error - bot loses
@@ -180,6 +199,10 @@ class Match:
             self.last_move = (row, col)
             self.last_flipped = flipped
         self._advance_turn()
+        
+        # Reset turn start time for next player
+        import time
+        self.turn_start_time = time.perf_counter()
 
         return True, None
 

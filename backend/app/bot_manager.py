@@ -439,10 +439,10 @@ class BotManager:
             if not isinstance(row, int) or not isinstance(col, int):
                 return None, f"Bot '{bot_name}' returned non-integer coordinates", execution_time_ms if exceeded_timeout else None
 
-            # If timeout was exceeded, return the move but with a warning message
+            # If timeout was exceeded, the bot loses (but we still return the move with execution time)
             if exceeded_timeout:
-                warning = f"Bot '{bot_name}' exceeded {timeout}s time limit (took {execution_time_ms:.2f}ms)"
-                return (row, col), warning, execution_time_ms
+                error = f"Bot '{bot_name}' lost: exceeded {timeout}s time limit (took {execution_time_ms:.2f}ms)"
+                return (row, col), error, execution_time_ms
             
             return (row, col), None, execution_time_ms
 

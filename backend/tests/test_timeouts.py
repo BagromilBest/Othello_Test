@@ -79,7 +79,7 @@ def test_bot_move_with_custom_timeout():
 
 
 def test_bot_move_timeout():
-    """Test bot move timeout - bot should finish within 4x timeout and return move with warning"""
+    """Test bot move timeout - bot should finish within 4x timeout and return move with error (bot loses)"""
     class TimeoutMoveBot:
         def __init__(self, my_color, opp_color):
             self.my_color = my_color
@@ -98,8 +98,8 @@ def test_bot_move_timeout():
     
     # Bot should complete within 4x timeout (4 seconds), so it should return a move
     assert move is not None
-    assert error is not None  # But there should be a warning message
-    assert "exceeded" in error.lower()
+    assert error is not None  # But there should be an error message (bot lost)
+    assert "lost:" in error.lower() and "time limit" in error.lower()
     assert exec_time_ms is not None  # And we should have execution time
     assert exec_time_ms >= 2000  # At least 2 seconds (2000ms)
 
