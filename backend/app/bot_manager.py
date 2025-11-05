@@ -5,6 +5,7 @@ import importlib.util
 import subprocess
 import sys
 import time
+import math
 from typing import Optional, Tuple, List
 from datetime import datetime, UTC
 from .models import BotMetadata
@@ -353,7 +354,7 @@ class BotManager:
             # Set up timeout (Unix-like systems only)
             if hasattr(signal, 'SIGALRM'):
                 signal.signal(signal.SIGALRM, timeout_handler)
-                signal.alarm(int(timeout))
+                signal.alarm(math.ceil(timeout))
 
             try:
                 start_time = time.perf_counter()
@@ -406,7 +407,7 @@ class BotManager:
             # Set up timeout (Unix-like systems only)
             if hasattr(signal, 'SIGALRM'):
                 signal.signal(signal.SIGALRM, timeout_handler)
-                signal.alarm(int(timeout))
+                signal.alarm(math.ceil(timeout))
 
             try:
                 start_time = time.perf_counter()
