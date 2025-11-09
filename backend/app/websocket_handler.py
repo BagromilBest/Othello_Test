@@ -28,6 +28,7 @@ class Match:
         self.black_init_time_ms: Optional[float] = None
         self.white_init_time_ms: Optional[float] = None
         self.turn_start_time: Optional[float] = None  # Track when current turn started
+        self.paused: bool = False  # Game pause state
 
         # Bot instances
         self.black_bot = None
@@ -82,6 +83,7 @@ class Match:
         """Get current game state"""
         valid_moves = [] if self.game_over else self.rules.get_valid_moves(self.current_player)
         black_count, white_count = self.board.count_pieces()
+        stable_pieces = self.rules.get_stable_pieces()
 
         return GameState(
             board=self.board.get_board(),
@@ -96,7 +98,9 @@ class Match:
             last_move=self.last_move,
             last_flipped=self.last_flipped,
             black_init_time_ms=self.black_init_time_ms,
-            white_init_time_ms=self.white_init_time_ms
+            white_init_time_ms=self.white_init_time_ms,
+            paused=self.paused,
+            stable_pieces=stable_pieces
         )
 
     def make_move(self, row: int, col: int) -> tuple[bool, Optional[str]]:
@@ -239,6 +243,19 @@ class Match:
                 else:
                     color_name = "Black" if winner == Board.BLACK else "White"
                     self.message = f"{color_name} wins!"
+
+    def toggle_pause(self) -> bool:
+        """
+        Toggle the pause state of the game.
+        
+        Returns:
+            The new pause state (True if paused, False if resumed)
+        """
+        if self.game_over:
+            return self.paused  # Don't allow pause/resume if game is over
+        
+        self.paused = not self.paused
+        return self.paused
 
 
 class ConnectionManager:
