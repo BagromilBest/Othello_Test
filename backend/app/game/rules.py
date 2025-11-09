@@ -253,14 +253,15 @@ class OthelloRules:
         Check if a piece at (row, col) is stable.
         
         A piece is stable if it cannot be flipped. This happens when:
-        1. It's in a corner
-        2. It's on an edge and connected to a stable piece or corner along that edge
-        3. It's surrounded by stable pieces or edges in perpendicular directions
+        1. Corner pieces are always stable
+        2. Edge pieces are stable if they have a clear same-color line along the edge to a corner
+        3. Interior pieces are stable if they have clear same-color lines to the edge 
+           in at least 2 perpendicular directions
         
         Args:
             row, col: Position of the piece
             color: Color of the piece
-            stable: 2D array tracking which pieces are already marked as stable
+            stable: 2D array tracking which pieces are already marked as stable (unused)
             
         Returns:
             True if the piece is stable
@@ -277,55 +278,64 @@ class OthelloRules:
         is_on_edge = on_top or on_bottom or on_left or on_right
         
         if is_on_edge:
-            # For edge pieces, check if they're connected to stable pieces along the edge
-            # For a top/bottom edge piece, check left and right
-            # For a left/right edge piece, check up and down
+            # For edge pieces, check if they have a clear line along the edge to a corner
+            # For top/bottom edge: check horizontal line to left or right corner
+            # For left/right edge: check vertical line to top or bottom corner
             if on_top or on_bottom:
-                # Check horizontal connections
+                # Check if connected to left or right corner along the edge
                 left_stable = self._is_direction_stable(row, col, 0, -1, color, stable)
                 right_stable = self._is_direction_stable(row, col, 0, 1, color, stable)
                 if left_stable or right_stable:
                     return True
             if on_left or on_right:
-                # Check vertical connections
+                # Check if connected to top or bottom corner along the edge
                 up_stable = self._is_direction_stable(row, col, -1, 0, color, stable)
                 down_stable = self._is_direction_stable(row, col, 1, 0, color, stable)
                 if up_stable or down_stable:
                     return True
-        else:
-            # For interior pieces, check pairs of opposite directions
+            
+            # Additionally, check if the edge piece has 2 perpendicular stable lines
+            # (one perpendicular to the edge, one along the edge)
             direction_pairs = [
                 [(-1, 0), (1, 0)],    # North and South (vertical)
                 [(0, -1), (0, 1)],    # West and East (horizontal)
-                [(-1, -1), (1, 1)],   # NW and SE (diagonal)
-                [(-1, 1), (1, -1)]    # NE and SW (diagonal)
             ]
             
-            stable_pairs = 0
             for pair in direction_pairs:
-                # Both directions in the pair must be stable
                 if all(self._is_direction_stable(row, col, dr, dc, color, stable) for dr, dc in pair):
-                    stable_pairs += 1
-            
-            # Need at least 2 perpendicular stable pairs
-            if stable_pairs >= 2:
-                return True
+                    return True
         
-        return False
+        # For interior pieces (and edge pieces that haven't returned yet),
+        # check pairs of opposite directions
+        direction_pairs = [
+            [(-1, 0), (1, 0)],    # North and South (vertical)
+            [(0, -1), (0, 1)],    # West and East (horizontal)
+            [(-1, -1), (1, 1)],   # NW and SE (diagonal)
+            [(-1, 1), (1, -1)]    # NE and SW (diagonal)
+        ]
+        
+        stable_pairs = 0
+        for pair in direction_pairs:
+            # Both directions in the pair must have clear lines to edge
+            if all(self._is_direction_stable(row, col, dr, dc, color, stable) for dr, dc in pair):
+                stable_pairs += 1
+        
+        # Need at least 2 perpendicular stable pairs
+        return stable_pairs >= 2
     
     def _is_direction_stable(self, row: int, col: int, dr: int, dc: int, 
                             color: int, stable: list[list[bool]]) -> bool:
         """
         Check if a direction from a piece is stable.
         
-        A direction is stable if all pieces along that direction are of the same color
-        and are stable, or the direction leads to an edge.
+        A direction is stable if all pieces along that direction to the edge 
+        are of the same color (unbroken line of same-colored pieces to the edge).
         
         Args:
             row, col: Starting position
             dr, dc: Direction vector
             color: Expected color
-            stable: 2D array tracking which pieces are marked as stable
+            stable: 2D array tracking which pieces are marked as stable (not used in new logic)
             
         Returns:
             True if the direction is stable
@@ -339,12 +349,8 @@ class OthelloRules:
             if piece != color:
                 return False
             
-            # If we encounter a piece of our color that's not stable, direction is not stable
-            if not stable[r][c]:
-                return False
-            
             r += dr
             c += dc
         
-        # We reached the edge with all pieces of the same color and stable
+        # We reached the edge with all pieces of the same color
         return True
