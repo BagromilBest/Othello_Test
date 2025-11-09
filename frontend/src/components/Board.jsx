@@ -1,6 +1,6 @@
 import React from 'react';
 
-const Board = ({ board, validMoves, onCellClick, gameOver, currentPlayerType, lastMove, lastFlipped }) => {
+const Board = ({ board, validMoves, onCellClick, gameOver, currentPlayerType, lastMove, lastFlipped, stablePieces, paused }) => {
   const size = board.length;
 
   // Calculate cell size based on board size
@@ -25,17 +25,28 @@ const Board = ({ board, validMoves, onCellClick, gameOver, currentPlayerType, la
     return lastFlipped && lastFlipped.some(([r, c]) => r === row && c === col);
   };
 
+  const isStablePiece = (row, col) => {
+    return stablePieces && stablePieces.some(([r, c]) => r === row && c === col);
+  };
+
   const renderCell = (row, col) => {
     const piece = board[row][col];
-    const valid = !gameOver && currentPlayerType === 'human' && isValidMove(row, col);
+    const valid = !gameOver && !paused && currentPlayerType === 'human' && isValidMove(row, col);
     const isLast = isLastMove(row, col);
     const isFlipped = isLastFlipped(row, col);
+    const isStable = isStablePiece(row, col);
 
     // Determine background color based on highlighting
     let bgColor = 'bg-green-800';
     if (piece !== -1) {
       bgColor = 'bg-green-700';
     }
+    
+    // Stable pieces get a light background
+    if (isStable && piece !== -1) {
+      bgColor = piece === 0 ? 'bg-purple-800' : 'bg-purple-700';
+    }
+    
     if (isLast) {
       // Subtle yellow tint for last move
       bgColor = piece === -1 ? 'bg-yellow-900' : 'bg-yellow-800';

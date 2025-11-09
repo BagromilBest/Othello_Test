@@ -139,6 +139,17 @@ const GameView = ({ onReturnToMenu, wsUrl }) => {
     onReturnToMenu();
   };
 
+  const handleTogglePause = () => {
+    if (!matchId || !wsRef.current) {
+      return;
+    }
+
+    wsRef.current.send(JSON.stringify({
+      type: 'toggle_pause',
+      match_id: matchId,
+    }));
+  };
+
   if (!gameState) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -182,6 +193,8 @@ const GameView = ({ onReturnToMenu, wsUrl }) => {
           <p className="text-lg font-semibold">
             {gameState.game_over ? (
               <span className="text-green-400">{message}</span>
+            ) : gameState.paused ? (
+              <span className="text-yellow-400">⏸ Paused</span>
             ) : (
               <>
                 <span className={gameState.current_player === 0 ? 'text-white' : 'text-gray-300'}>
@@ -238,11 +251,21 @@ const GameView = ({ onReturnToMenu, wsUrl }) => {
           currentPlayerType={currentPlayerType}
           lastMove={gameState.last_move}
           lastFlipped={gameState.last_flipped}
+          stablePieces={gameState.stable_pieces || []}
+          paused={gameState.paused}
         />
       </div>
 
       {/* Controls */}
       <div className="flex justify-center gap-4 mt-6">
+        {!gameState.game_over && (
+          <button
+            onClick={handleTogglePause}
+            className={gameState.paused ? "btn-primary" : "btn-secondary"}
+          >
+            {gameState.paused ? '▶ Resume' : '⏸ Pause'}
+          </button>
+        )}
         <button
           onClick={handleReturnToMenu}
           className="btn-secondary"

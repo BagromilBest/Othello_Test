@@ -195,6 +195,13 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                     })
                     continue
 
+                if match.paused:
+                    await manager.send_message(client_id, {
+                        "type": "error",
+                        "message": "Game is paused"
+                    })
+                    continue
+
                 success, error = match.make_move(row, col)
 
                 if success:
@@ -222,7 +229,7 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                         is_bot = (match.current_player == 0 and match.config.black_player_type == "bot") or \
                                  (match.current_player == 1 and match.config.white_player_type == "bot")
 
-                        if is_bot:
+                        if is_bot and not match.paused:
                             asyncio.create_task(execute_bot_turn(client_id, match_id))
                 else:
                     await manager.send_message(client_id, {
@@ -252,6 +259,32 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                         "message": "Match not found"
                     })
 
+            elif message_type == "toggle_pause":
+                # Toggle pause state
+                match_id = data.get("match_id")
+                match = manager.get_match(match_id)
+
+                if match:
+                    new_pause_state = match.toggle_pause()
+                    state = match.get_state()
+                    await manager.send_message(client_id, {
+                        "type": "game_state",
+                        "state": state.model_dump()
+                    })
+                    
+                    # If we're resuming and it's a bot's turn, trigger the bot move
+                    if not new_pause_state and not match.game_over:
+                        is_bot = (match.current_player == 0 and match.config.black_player_type == "bot") or \
+                                 (match.current_player == 1 and match.config.white_player_type == "bot")
+                        
+                        if is_bot:
+                            asyncio.create_task(execute_bot_turn(client_id, match_id))
+                else:
+                    await manager.send_message(client_id, {
+                        "type": "error",
+                        "message": "Match not found"
+                    })
+
     except WebSocketDisconnect:
         manager.disconnect(client_id)
 
@@ -268,7 +301,7 @@ async def execute_bot_turn(client_id: str, match_id: str, delay: float = 0.5):
     await asyncio.sleep(delay)
 
     match = manager.get_match(match_id)
-    if not match or match.game_over:
+    if not match or match.game_over or match.paused:
         return
 
     success, error = match.make_bot_move()
@@ -308,4 +341,9 @@ async def auto_play_match(client_id: str, match_id: str, move_delay: float = 1.0
         return
 
     while not match.game_over:
+        # Wait if paused
+        if match.paused:
+            await asyncio.sleep(0.5)
+            continue
+            
         await execute_bot_turn(client_id, match_id, move_delay)

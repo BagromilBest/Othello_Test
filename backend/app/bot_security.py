@@ -37,7 +37,7 @@ class BotSecurityValidator:
     # Allowed imports for Reversi bots
     ALLOWED_IMPORTS = {
         'random', 'typing', 'time', 'math', 'copy', 'collections',
-        'itertools', 'functools', 'dataclasses', 'enum', 'abc'
+        'itertools', 'functools', 'dataclasses', 'enum', 'abc', 'numpy'
     }
     
     # Dangerous imports that should be blocked
