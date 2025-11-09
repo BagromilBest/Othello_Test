@@ -150,3 +150,60 @@ def test_complete_row_and_column_from_corner():
     
     # The corner (0,0) should definitely be stable
     assert (0, 0) in stable_pieces
+
+
+def test_interior_pieces_with_clear_lines_to_edges():
+    """Test that interior pieces with clear lines of same color to edges in 2 perpendicular directions are stable"""
+    board = Board(8)
+    rules = OthelloRules(board)
+    
+    # Clear the board
+    for r in range(8):
+        for c in range(8):
+            board.set_piece(r, c, Board.EMPTY)
+    
+    # Create a full cross pattern (all rows and columns through center filled)
+    # Column 3 fully filled with white
+    for r in range(8):
+        board.set_piece(r, 3, Board.WHITE)
+    
+    # Row 3 fully filled with white
+    for c in range(8):
+        board.set_piece(3, c, Board.WHITE)
+    
+    stable_pieces = rules.get_stable_pieces()
+    
+    # The center piece (3,3) should be stable - has clear lines in both H and V
+    assert (3, 3) in stable_pieces
+    
+    # Edge pieces on the cross should be stable
+    assert (0, 3) in stable_pieces  # Top edge
+    assert (7, 3) in stable_pieces  # Bottom edge
+    assert (3, 0) in stable_pieces  # Left edge  
+    assert (3, 7) in stable_pieces  # Right edge
+
+
+def test_interior_pieces_without_perpendicular_lines():
+    """Test that interior pieces without 2 perpendicular clear lines are not stable"""
+    board = Board(8)
+    rules = OthelloRules(board)
+    
+    # Clear the board
+    for r in range(8):
+        for c in range(8):
+            board.set_piece(r, c, Board.EMPTY)
+    
+    # Create only a vertical line at column 3
+    for r in range(8):
+        board.set_piece(r, 3, Board.WHITE)
+    
+    stable_pieces = rules.get_stable_pieces()
+    
+    # Interior pieces on the line should NOT be stable (only 1 direction pair)
+    # Only the edge pieces should be stable
+    assert (0, 3) in stable_pieces  # Top edge
+    assert (7, 3) in stable_pieces  # Bottom edge
+    
+    # Interior pieces should NOT be stable
+    assert (3, 3) not in stable_pieces
+    assert (4, 3) not in stable_pieces
