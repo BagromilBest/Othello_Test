@@ -45,6 +45,8 @@ class GameState(BaseModel):
     last_flipped: Optional[list[tuple[int, int]]] = None  # Positions of stones flipped by last move
     black_init_time_ms: Optional[float] = None  # Time taken by black bot to initialize in milliseconds
     white_init_time_ms: Optional[float] = None  # Time taken by white bot to initialize in milliseconds
+    paused: bool = False  # Whether the game is paused
+    stable_pieces: list[tuple[int, int]] = []  # List of stable pieces positions
 
 
 class RenameBotRequest(BaseModel):
