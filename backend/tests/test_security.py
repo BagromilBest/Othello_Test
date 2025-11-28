@@ -76,7 +76,7 @@ class MyBot:
         """Test that non-allowed imports are blocked"""
         validator = BotSecurityValidator()
         code = """
-import numpy
+import pandas
 
 class MyBot:
     def select_move(self, board):
@@ -84,7 +84,7 @@ class MyBot:
 """
         is_valid, violations = validator.validate(code, "test_bot.py")
         assert not is_valid
-        assert any('numpy' in str(v).lower() for v in violations)
+        assert any('pandas' in str(v).lower() for v in violations)
     
     def test_allowed_imports(self):
         """Test that allowed imports work"""
@@ -96,6 +96,7 @@ import time
 import math
 import copy
 import collections
+import numpy
 from itertools import product
 from functools import lru_cache
 
