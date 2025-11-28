@@ -213,10 +213,11 @@ const GameView = ({ onReturnToMenu, wsUrl }) => {
               </p>
               {gameState.bot_thinking_time_ms != null && (
                 <p className="text-xs text-blue-400 mt-1">
-                  {currentPlayerType === 'human' 
-                    ? 'Human' 
-                    : (gameState.current_player === 0 ? matchConfig?.black_bot_name : matchConfig?.white_bot_name)
-                  } thinking: {gameState.bot_thinking_time_ms.toFixed(2)}ms
+                  {/* Show thinking time for the player who just moved (previous player) */}
+                  {gameState.current_player === 0
+                    ? (matchConfig?.white_player_type === 'human' ? 'Human' : matchConfig?.white_bot_name)
+                    : (matchConfig?.black_player_type === 'human' ? 'Human' : matchConfig?.black_bot_name)
+                  } took: {gameState.bot_thinking_time_ms.toFixed(2)}ms
                 </p>
               )}
             </>
