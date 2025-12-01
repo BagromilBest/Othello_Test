@@ -1,19 +1,30 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Board from './Board';
+import ErrorAlert from './ErrorAlert';
 
-const GameView = ({ onReturnToMenu, wsUrl }) => {
+const GameView = ({ onReturnToMenu, wsUrl, onInitStageChange, onInitComplete, onInitError }) => {
   const [gameState, setGameState] = useState(null);
   const [matchId, setMatchId] = useState(null);
   const [message, setMessage] = useState('');
   const [connected, setConnected] = useState(false);
   const [matchConfig, setMatchConfig] = useState(null);
+  const [wsError, setWsError] = useState(null);
   const wsRef = useRef(null);
+  const initReportedRef = useRef(false);
+
+  // Report initialization stage changes
+  const reportStage = useCallback((stage, previousStage) => {
+    if (onInitStageChange) {
+      onInitStageChange(stage, previousStage);
+    }
+  }, [onInitStageChange]);
 
   useEffect(() => {
     // Get match config from sessionStorage (set by MainMenu)
     const config = JSON.parse(sessionStorage.getItem('matchConfig') || 'null');
     if (config) {
       setMatchConfig(config);
+      reportStage('connecting_websocket', 'starting');
       connectWebSocket(config);
     }
 
@@ -26,12 +37,27 @@ const GameView = ({ onReturnToMenu, wsUrl }) => {
 
   const connectWebSocket = (config) => {
     const clientId = Math.random().toString(36).substring(7);
-    const ws = new WebSocket(`${wsUrl}/ws/${clientId}`);
+    
+    let ws;
+    try {
+      ws = new WebSocket(`${wsUrl}/ws/${clientId}`);
+    } catch (error) {
+      const errorMsg = `Failed to create WebSocket connection: ${error.message}`;
+      console.error('[WS] Connection error:', error);
+      setWsError(errorMsg);
+      if (onInitError) {
+        onInitError(errorMsg);
+      }
+      return;
+    }
 
     ws.onopen = () => {
-      console.log('WebSocket connected');
+      console.log('[WS] WebSocket connected');
       setConnected(true);
       setMessage('Connected to server');
+      setWsError(null);
+
+      reportStage('creating_match', 'connecting_websocket');
 
       // Create a new match
       ws.send(JSON.stringify({
@@ -46,32 +72,52 @@ const GameView = ({ onReturnToMenu, wsUrl }) => {
     };
 
     ws.onerror = (error) => {
-      console.error('WebSocket error:', error);
+      console.error('[WS] WebSocket error:', error);
+      const errorMsg = 'WebSocket connection error. Check your network and try again.';
       setMessage('Connection error');
+      setWsError(errorMsg);
+      if (onInitError && !initReportedRef.current) {
+        onInitError(errorMsg);
+      }
     };
 
-    ws.onclose = () => {
-      console.log('WebSocket disconnected');
+    ws.onclose = (event) => {
+      console.log('[WS] WebSocket disconnected, code:', event.code);
       setConnected(false);
       setMessage('Disconnected from server');
+      
+      // Only report error if this is an unexpected close during initialization
+      if (!initReportedRef.current && !gameState && onInitError) {
+        const errorMsg = `WebSocket closed unexpectedly (code: ${event.code}). Please retry.`;
+        setWsError(errorMsg);
+        onInitError(errorMsg);
+      }
     };
 
     wsRef.current = ws;
   };
 
   const handleWebSocketMessage = (data) => {
-    console.log('Received:', data);
+    console.log('[WS] Received:', data);
 
     switch (data.type) {
       case 'match_created':
         setMatchId(data.match_id);
         setMessage('Match created');
+        reportStage('waiting_server', 'creating_match');
         break;
 
       case 'game_state':
         setGameState(data.state);
         if (data.state.message) {
           setMessage(data.state.message);
+        }
+        
+        // Report initialization complete on first game state
+        if (!initReportedRef.current && onInitComplete) {
+          initReportedRef.current = true;
+          reportStage('ready', 'waiting_server');
+          onInitComplete();
         }
         break;
 
@@ -90,14 +136,22 @@ const GameView = ({ onReturnToMenu, wsUrl }) => {
 
       case 'error':
         setMessage(`Error: ${data.message}`);
+        console.error('[WS] Server error:', data.message);
+        if (onInitError && !initReportedRef.current) {
+          onInitError(`Server error: ${data.message}`);
+        }
         break;
 
       case 'bot_error':
         setMessage(`Bot Error: ${data.message}`);
+        console.error('[WS] Bot error:', data.message);
+        if (onInitError && !initReportedRef.current) {
+          onInitError(`Bot initialization failed: ${data.message}`);
+        }
         break;
 
       default:
-        console.log('Unknown message type:', data.type);
+        console.log('[WS] Unknown message type:', data.type);
     }
   };
 
@@ -150,9 +204,25 @@ const GameView = ({ onReturnToMenu, wsUrl }) => {
     }));
   };
 
+  const handleDismissError = () => {
+    setWsError(null);
+  };
+
   if (!gameState) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
+      <div className="flex flex-col items-center justify-center min-h-[400px]">
+        {wsError && (
+          <div className="mb-4 max-w-md w-full">
+            <ErrorAlert
+              type="error"
+              title="Connection Error"
+              message={wsError}
+              action="Retry"
+              onAction={handleReturnToMenu}
+              onDismiss={handleDismissError}
+            />
+          </div>
+        )}
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
           <p className="text-gray-400">Initializing game...</p>
@@ -168,6 +238,18 @@ const GameView = ({ onReturnToMenu, wsUrl }) => {
 
   return (
     <div className="max-w-7xl mx-auto">
+      {/* WebSocket Error Alert */}
+      {wsError && (
+        <div className="mb-4">
+          <ErrorAlert
+            type="error"
+            title="Connection Error"
+            message={wsError}
+            onDismiss={handleDismissError}
+          />
+        </div>
+      )}
+
       {/* Header with scores */}
       <div className="grid grid-cols-3 gap-4 mb-6">
         {/* Black Score */}

@@ -506,11 +506,68 @@ container = client.containers.run(
 - In production (Docker), the app automatically uses the current host
 - In development, set environment variables with your machine's IP address
 
+### Slow game initialization (e.g., on Raspberry Pi)
+
+When running the application on low-powered devices like a Raspberry Pi and accessing it remotely, you may experience slow initialization times. The frontend now includes initialization progress tracking and diagnostics to help identify bottlenecks.
+
+**Symptoms:**
+- Long delay when clicking "Start Game"
+- Progress overlay stalls on certain stages
+- WebSocket connection takes longer than expected
+
+**Debugging initialization timing:**
+
+1. Open the browser's Developer Console (F12 or Cmd+Option+I)
+2. Start a new game - you'll see timing logs like:
+   ```
+   [Timing] Stage started: start_game_click
+   [Timing] Stage completed: connecting_websocket - 1250.50ms
+   ```
+3. The initialization progress overlay also shows duration for each completed stage
+
+**Enabling detailed debug logging:**
+
+Set the `VITE_DEBUG` environment variable to `true` in your `.env` file:
+```bash
+# frontend/.env
+VITE_DEBUG=true
+```
+
+Optionally, configure a debug endpoint to collect timing data:
+```bash
+VITE_DEBUG_ENDPOINT=http://your-server/api/debug/timing
+```
+
+**Common causes and solutions:**
+
+| Stage | Issue | Solution |
+|-------|-------|----------|
+| Connecting WebSocket | Slow network | Check network latency; use wired connection |
+| Creating match | Backend slow | Check backend CPU/memory; reduce board size |
+| Waiting for server | Bot initialization slow | Use simpler bots; check bot code efficiency |
+
+**If initialization stalls:**
+
+The progress overlay shows a warning after 15 seconds per stage. You can:
+- Click "Retry" to restart initialization
+- Click "Cancel" to return to the menu
+- Check the browser console for error messages
+
 ### Bot upload fails
 - File must have `.py` extension
 - Bot must implement required interface
 - Check file size limits
 - Verify uploads directory has write permissions
+
+**Bot upload troubleshooting steps:**
+
+1. Ensure the bot file is a valid Python file with `.py` extension
+2. Verify your bot implements the required `select_move(self, board)` method
+3. Check the browser console and network tab for detailed error messages
+4. If upload succeeds but bot doesn't appear:
+   - Refresh the page
+   - Check the "Manage Bots" dialog
+   - Verify backend logs for any validation errors
 
 ### Invalid move errors
 - Bot must return `tuple[int, int]`
