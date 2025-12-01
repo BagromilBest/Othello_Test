@@ -105,10 +105,11 @@ function App() {
 
   // Called by GameView when initialization is complete
   const handleInitComplete = useCallback(() => {
-    // Record final stage duration
-    const duration = endStage('connecting_websocket');
+    // Record final stage duration using STAGES constant
+    const finalStage = STAGES.WEBSOCKET_CONNECT;
+    const duration = endStage(finalStage);
     if (duration !== null) {
-      setStageDurations(prev => ({ ...prev, connecting_websocket: duration }));
+      setStageDurations(prev => ({ ...prev, [finalStage]: duration }));
     }
     
     // Log timing summary

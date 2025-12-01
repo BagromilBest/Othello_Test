@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 
 /**
  * Initialization progress overlay component.
@@ -27,7 +27,7 @@ const InitializationProgress = ({
   stageDurations = {},
 }) => {
   const [stalled, setStalled] = useState(false);
-  const [stallTimeout, setStallTimeout] = useState(null);
+  const stallTimeoutRef = useRef(null);
 
   // Find the index of the current stage
   const currentIndex = INIT_STAGES.findIndex((s) => s.id === currentStage);
@@ -36,8 +36,9 @@ const InitializationProgress = ({
   // Track stall detection
   useEffect(() => {
     // Clear previous timeout
-    if (stallTimeout) {
-      clearTimeout(stallTimeout);
+    if (stallTimeoutRef.current) {
+      clearTimeout(stallTimeoutRef.current);
+      stallTimeoutRef.current = null;
     }
 
     // Don't set timeout for 'ready' stage or if there's an error
@@ -47,15 +48,14 @@ const InitializationProgress = ({
     }
 
     // Set new timeout for stall detection
-    const timeout = setTimeout(() => {
+    stallTimeoutRef.current = setTimeout(() => {
       setStalled(true);
     }, stageTimeout * 1000);
 
-    setStallTimeout(timeout);
-
     return () => {
-      if (timeout) {
-        clearTimeout(timeout);
+      if (stallTimeoutRef.current) {
+        clearTimeout(stallTimeoutRef.current);
+        stallTimeoutRef.current = null;
       }
     };
   }, [currentStage, stageTimeout, error]);
