@@ -53,7 +53,7 @@ const MainMenu = ({ bots, onStartGame, onBotsUpdated, apiUrl, apiError, onDismis
 
     const modal = modalRef.current;
     const focusableElements = modal.querySelectorAll(
-      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+      'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex="0"]'
     );
     const firstFocusable = focusableElements[0];
     const lastFocusable = focusableElements[focusableElements.length - 1];
