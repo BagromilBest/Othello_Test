@@ -1,34 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import MainMenu from './components/MainMenu';
 import GameView from './components/GameView';
-
-// Determine API and WebSocket URLs dynamically
-// In production (served by nginx), use the current host (nginx will proxy to backend)
-// In development, use environment variables or localhost
-const getApiUrl = () => {
-  if (import.meta.env.VITE_API_URL) {
-    return import.meta.env.VITE_API_URL;
-  }
-  // In production, construct URL using current host (nginx will proxy to backend)
-  if (import.meta.env.PROD) {
-    return `${window.location.protocol}//${window.location.host}`;
-  }
-  // In development, use localhost
-  return 'http://localhost:8000';
-};
-
-const getWsUrl = () => {
-  if (import.meta.env.VITE_WS_URL) {
-    return import.meta.env.VITE_WS_URL;
-  }
-  // In production, construct WebSocket URL using current host (nginx will proxy to backend)
-  if (import.meta.env.PROD) {
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    return `${protocol}//${window.location.host}`;
-  }
-  // In development, use localhost
-  return 'ws://localhost:8000';
-};
+import NetworkWarning from './components/NetworkWarning';
+import { getApiUrl, getWsUrl } from './utils/network';
 
 const API_URL = getApiUrl();
 const WS_URL = getWsUrl();
@@ -38,6 +12,7 @@ function App() {
   const [matchId, setMatchId] = useState(null);
   const [websocket, setWebsocket] = useState(null);
   const [bots, setBots] = useState([]);
+  const [apiError, setApiError] = useState(null);
 
   // Fetch available bots on mount
   useEffect(() => {
@@ -46,11 +21,16 @@ function App() {
 
   const fetchBots = async () => {
     try {
+      setApiError(null);
       const response = await fetch(`${API_URL}/api/bots`);
+      if (!response.ok) {
+        throw new Error(`HTTP error: ${response.status}`);
+      }
       const data = await response.json();
       setBots(data);
     } catch (error) {
       console.error('Failed to fetch bots:', error);
+      setApiError(`Failed to connect to backend at ${API_URL}. ${error.message}`);
     }
   };
 
@@ -78,6 +58,7 @@ function App() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
       <div className="container mx-auto px-4 py-8">
+        <NetworkWarning />
         <header className="text-center mb-8">
           <h1 className="text-5xl font-bold text-white mb-2">Othello</h1>
           <p className="text-gray-400">Classic strategy board game</p>
@@ -89,6 +70,8 @@ function App() {
             onStartGame={startGame}
             onBotsUpdated={fetchBots}
             apiUrl={API_URL}
+            apiError={apiError}
+            onDismissError={() => setApiError(null)}
           />
         ) : (
           <GameView

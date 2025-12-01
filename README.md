@@ -113,6 +113,70 @@ A full-stack web application for playing Othello (Reversi) with support for huma
    npm run build
    ```
 
+6. **Run tests**
+   ```bash
+   npm run test
+   ```
+
+## Running on a LAN / Accessing from Other Devices
+
+When running the frontend in development mode (via `npm run dev`) and accessing it from another device on the same network (e.g., running Vite on a Raspberry Pi and connecting from a Mac), special consideration is needed for API/WebSocket URLs.
+
+### The Problem
+
+By default, the frontend in development mode uses `localhost` URLs (`http://localhost:8000` and `ws://localhost:8000`). When you access the dev server remotely (via the Pi's IP address), these URLs point to the client's loopback interface (e.g., your Mac), not the server running the backend (the Pi). This causes API/WebSocket connections to fail.
+
+### Solutions
+
+**Option 1: Automatic Detection (Recommended)**
+
+The frontend now automatically detects when it's being accessed remotely in development mode and will:
+- Construct API/WS URLs using the server's hostname (e.g., `http://192.168.1.50:8000`)
+- Display a yellow warning banner indicating remote dev mode
+- Log warnings to the browser console
+
+No configuration is needed - just access the frontend via the server's IP address.
+
+**Option 2: Explicit Configuration**
+
+For more control, set environment variables in a `.env` file in the `frontend/` directory:
+
+```bash
+# frontend/.env
+VITE_API_URL=http://192.168.1.100:8000
+VITE_WS_URL=ws://192.168.1.100:8000
+```
+
+Replace `192.168.1.100` with your server's actual IP address.
+
+**Option 3: Production Build**
+
+Run a production build which automatically uses the current host:
+
+```bash
+cd frontend
+npm run build
+npm run preview
+```
+
+### Verification
+
+1. Start the backend on your server (e.g., Raspberry Pi):
+   ```bash
+   cd backend
+   uvicorn app.main:app --host 0.0.0.0 --port 8000
+   ```
+
+2. Start the frontend:
+   ```bash
+   cd frontend
+   npm run dev
+   ```
+
+3. From another device, access `http://<server-ip>:5173`
+
+4. You should see the game load successfully. If using automatic detection, a yellow warning banner will appear.
+
 ## Creating Custom Bots
 
 ### Bot Interface Requirements
