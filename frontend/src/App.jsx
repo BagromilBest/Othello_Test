@@ -2,8 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import MainMenu from './components/MainMenu';
 import GameView from './components/GameView';
 import NetworkWarning from './components/NetworkWarning';
-import InitializationProgress, { INIT_STAGES } from './components/InitializationProgress';
-import ErrorAlert from './components/ErrorAlert';
+import InitializationProgress from './components/InitializationProgress';
 import { getApiUrl, getWsUrl } from './utils/network';
 import { startStage, endStage, clearTimings, logTimingSummary, STAGES } from './utils/timing';
 
@@ -15,16 +14,17 @@ const MAX_RETRIES = 3;
 const RETRY_DELAY_BASE = 1000; // 1 second base delay
 
 function App() {
-  const [gameState, setGameState] = useState('menu'); // 'menu' | 'initializing' | 'playing'
+  const [gameState, setGameState] = useState('menu'); // 'menu' | 'playing'
   const [matchId, setMatchId] = useState(null);
   const [websocket, setWebsocket] = useState(null);
   const [bots, setBots] = useState([]);
   const [apiError, setApiError] = useState(null);
   
-  // Initialization state
+  // Initialization state (used while gameState === 'playing' but game not yet ready)
   const [initStage, setInitStage] = useState('starting');
   const [initError, setInitError] = useState(null);
   const [stageDurations, setStageDurations] = useState({});
+  const [isInitializing, setIsInitializing] = useState(false);
   const [pendingConfig, setPendingConfig] = useState(null);
 
   // Fetch available bots on mount
@@ -82,7 +82,8 @@ function App() {
       sessionStorage.setItem('matchConfig', JSON.stringify(config));
       setPendingConfig(config);
       setInitStage('starting');
-      setGameState('initializing');
+      setIsInitializing(true);
+      setGameState('playing');
     } catch (error) {
       console.error('Failed to store game config:', error);
       setInitError('Failed to start game. Please try again.');
@@ -115,8 +116,8 @@ function App() {
     // Log timing summary
     logTimingSummary();
     
-    // Transition to playing state
-    setGameState('playing');
+    // Hide the initialization overlay
+    setIsInitializing(false);
   }, []);
 
   // Called by GameView on initialization error
@@ -127,7 +128,16 @@ function App() {
 
   const handleRetryInit = useCallback(() => {
     if (pendingConfig) {
-      startGame(pendingConfig);
+      // Clear the session storage and reset state
+      sessionStorage.removeItem('matchConfig');
+      setGameState('menu');
+      setIsInitializing(false);
+      setInitError(null);
+      
+      // Small delay then restart
+      setTimeout(() => {
+        startGame(pendingConfig);
+      }, 100);
     }
   }, [pendingConfig, startGame]);
 
@@ -136,6 +146,7 @@ function App() {
     setPendingConfig(null);
     setInitStage('starting');
     setInitError(null);
+    setIsInitializing(false);
     setGameState('menu');
     clearTimings();
     setStageDurations({});
@@ -150,6 +161,7 @@ function App() {
     setPendingConfig(null);
     setInitStage('starting');
     setInitError(null);
+    setIsInitializing(false);
     setGameState('menu');
     clearTimings();
     setStageDurations({});
@@ -176,42 +188,26 @@ function App() {
           />
         )}
 
-        {gameState === 'initializing' && (
-          <>
-            <MainMenu
-              bots={bots}
-              onStartGame={startGame}
-              onBotsUpdated={fetchBots}
-              apiUrl={API_URL}
-              apiError={apiError}
-              onDismissError={() => setApiError(null)}
-              isStartingGame={true}
-            />
-            <InitializationProgress
-              currentStage={initStage}
-              error={initError}
-              onRetry={handleRetryInit}
-              onCancel={handleCancelInit}
-              stageDurations={stageDurations}
-            />
-            {/* Hidden GameView for initialization */}
-            <div className="hidden">
-              <GameView
-                onReturnToMenu={returnToMenu}
-                wsUrl={WS_URL}
-                onInitStageChange={updateInitStage}
-                onInitComplete={handleInitComplete}
-                onInitError={handleInitError}
-              />
-            </div>
-          </>
-        )}
-
         {gameState === 'playing' && (
-          <GameView
-            onReturnToMenu={returnToMenu}
-            wsUrl={WS_URL}
-          />
+          <>
+            <GameView
+              onReturnToMenu={returnToMenu}
+              wsUrl={WS_URL}
+              onInitStageChange={updateInitStage}
+              onInitComplete={handleInitComplete}
+              onInitError={handleInitError}
+            />
+            {/* Show initialization progress overlay while initializing */}
+            {isInitializing && (
+              <InitializationProgress
+                currentStage={initStage}
+                error={initError}
+                onRetry={handleRetryInit}
+                onCancel={handleCancelInit}
+                stageDurations={stageDurations}
+              />
+            )}
+          </>
         )}
       </div>
     </div>
