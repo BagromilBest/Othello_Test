@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 
-const MainMenu = ({ bots, onStartGame, onBotsUpdated, apiUrl, apiError, onDismissError }) => {
+const MainMenu = ({ bots, onStartGame, onBotsUpdated, apiUrl, apiError, onDismissError, isStartingGame = false }) => {
   const [boardSize, setBoardSize] = useState(8);
   const [blackPlayerType, setBlackPlayerType] = useState('human');
   const [blackBotName, setBlackBotName] = useState('');
@@ -15,6 +15,70 @@ const MainMenu = ({ bots, onStartGame, onBotsUpdated, apiUrl, apiError, onDismis
   const [newBotName, setNewBotName] = useState('');
   const [manageError, setManageError] = useState('');
   const [manageSuccess, setManageSuccess] = useState('');
+
+  // Modal ref for focus trapping
+  const modalRef = useRef(null);
+  const closeButtonRef = useRef(null);
+
+  // Close modal handler
+  const closeManageBots = useCallback(() => {
+    setShowManageBots(false);
+    setEditingBot(null);
+    setManageError('');
+    setManageSuccess('');
+  }, []);
+
+  // Handle Escape key to close modal
+  useEffect(() => {
+    const handleEscKey = (e) => {
+      if (e.key === 'Escape' && showManageBots) {
+        closeManageBots();
+      }
+    };
+
+    if (showManageBots) {
+      document.addEventListener('keydown', handleEscKey);
+      // Focus the close button when modal opens
+      closeButtonRef.current?.focus();
+    }
+
+    return () => {
+      document.removeEventListener('keydown', handleEscKey);
+    };
+  }, [showManageBots, closeManageBots]);
+
+  // Focus trapping for modal
+  useEffect(() => {
+    if (!showManageBots || !modalRef.current) return;
+
+    const modal = modalRef.current;
+    const focusableElements = modal.querySelectorAll(
+      'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex="0"]'
+    );
+    const firstFocusable = focusableElements[0];
+    const lastFocusable = focusableElements[focusableElements.length - 1];
+
+    const handleTabKey = (e) => {
+      if (e.key !== 'Tab') return;
+
+      if (e.shiftKey) {
+        // Shift + Tab
+        if (document.activeElement === firstFocusable) {
+          e.preventDefault();
+          lastFocusable?.focus();
+        }
+      } else {
+        // Tab
+        if (document.activeElement === lastFocusable) {
+          e.preventDefault();
+          firstFocusable?.focus();
+        }
+      }
+    };
+
+    modal.addEventListener('keydown', handleTabKey);
+    return () => modal.removeEventListener('keydown', handleTabKey);
+  }, [showManageBots, bots, editingBot]);
 
   const handleFileUpload = async (event) => {
     const file = event.target.files[0];
@@ -323,13 +387,15 @@ const MainMenu = ({ bots, onStartGame, onBotsUpdated, apiUrl, apiError, onDismis
             type="file"
             accept=".py"
             onChange={handleFileUpload}
+            disabled={isStartingGame}
             className="w-full text-sm text-gray-400
               file:mr-4 file:py-2 file:px-4
               file:rounded file:border-0
               file:text-sm file:font-semibold
               file:bg-primary file:text-white
               hover:file:bg-primary-dark
-              file:cursor-pointer"
+              file:cursor-pointer
+              disabled:opacity-50 disabled:cursor-not-allowed"
           />
           {uploadError && (
             <p className="mt-2 text-sm text-red-400">{uploadError}</p>
@@ -342,9 +408,17 @@ const MainMenu = ({ bots, onStartGame, onBotsUpdated, apiUrl, apiError, onDismis
         {/* Start Button */}
         <button
           onClick={handleStartGame}
-          className="w-full btn-primary text-lg py-3"
+          disabled={isStartingGame}
+          className="w-full btn-primary text-lg py-3 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          Start Game
+          {isStartingGame ? (
+            <>
+              <span className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></span>
+              Starting...
+            </>
+          ) : (
+            'Start Game'
+          )}
         </button>
       </div>
 
@@ -377,37 +451,51 @@ const MainMenu = ({ bots, onStartGame, onBotsUpdated, apiUrl, apiError, onDismis
         </div>
       )}
 
-      {/* Manage Bots Modal */}
+      {/* Manage Bots Modal - Improved UI */}
       {showManageBots && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-surface-dark rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto">
+        <div 
+          className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50"
+          onClick={(e) => {
+            // Close when clicking the backdrop
+            if (e.target === e.currentTarget) {
+              closeManageBots();
+            }
+          }}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="manage-bots-title"
+        >
+          <div 
+            ref={modalRef}
+            className="bg-surface-light rounded-xl shadow-2xl p-6 max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto border border-surface-lighter"
+          >
+            {/* Header with prominent close button */}
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-2xl font-semibold">Manage Bots</h3>
+              <h3 id="manage-bots-title" className="text-2xl font-semibold text-white">Manage Bots</h3>
               <button
-                onClick={() => {
-                  setShowManageBots(false);
-                  setEditingBot(null);
-                  setManageError('');
-                  setManageSuccess('');
-                }}
-                className="text-gray-400 hover:text-white text-2xl"
+                ref={closeButtonRef}
+                onClick={closeManageBots}
+                className="bg-red-600 hover:bg-red-700 text-white rounded-lg p-2 transition-colors focus:outline-none focus:ring-2 focus:ring-red-400"
+                aria-label="Close modal"
               >
-                ×
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                </svg>
               </button>
             </div>
 
             {manageError && (
-              <p className="mb-3 text-sm text-red-400">{manageError}</p>
+              <p className="mb-3 text-sm text-red-400 bg-red-900/30 px-3 py-2 rounded-lg">{manageError}</p>
             )}
             {manageSuccess && (
-              <p className="mb-3 text-sm text-green-400">{manageSuccess}</p>
+              <p className="mb-3 text-sm text-green-400 bg-green-900/30 px-3 py-2 rounded-lg">{manageSuccess}</p>
             )}
 
             <div className="grid gap-3">
               {bots.map((bot) => (
                 <div
                   key={bot.name}
-                  className="bg-surface rounded p-4"
+                  className="bg-surface rounded-lg p-4"
                 >
                   {editingBot === bot.name ? (
                     <div className="flex gap-2 items-center">
@@ -472,6 +560,16 @@ const MainMenu = ({ bots, onStartGame, onBotsUpdated, apiUrl, apiError, onDismis
                   )}
                 </div>
               ))}
+            </div>
+
+            {/* Bottom close button for easier access */}
+            <div className="mt-6 pt-4 border-t border-surface-lighter flex justify-end">
+              <button
+                onClick={closeManageBots}
+                className="bg-primary hover:bg-primary-dark text-white font-medium px-6 py-2 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-primary-light"
+              >
+                Close
+              </button>
             </div>
           </div>
         </div>
