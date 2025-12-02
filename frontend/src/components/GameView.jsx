@@ -11,15 +11,35 @@ const GameView = ({ onReturnToMenu, wsUrl, onInitStageChange, onInitComplete, on
   const [wsError, setWsError] = useState(null);
   const wsRef = useRef(null);
   const initReportedRef = useRef(false);
+  const mountedRef = useRef(false);
+  const connectingRef = useRef(false);
 
-  // Report initialization stage changes
+  // Store callbacks in refs to avoid stale closures
+  const onInitStageChangeRef = useRef(onInitStageChange);
+  const onInitCompleteRef = useRef(onInitComplete);
+  const onInitErrorRef = useRef(onInitError);
+
+  // Update refs when props change
+  useEffect(() => {
+    onInitStageChangeRef.current = onInitStageChange;
+    onInitCompleteRef.current = onInitComplete;
+    onInitErrorRef.current = onInitError;
+  }, [onInitStageChange, onInitComplete, onInitError]);
+
+  // Report initialization stage changes using ref
   const reportStage = useCallback((stage, previousStage) => {
-    if (onInitStageChange) {
-      onInitStageChange(stage, previousStage);
+    if (onInitStageChangeRef.current) {
+      onInitStageChangeRef.current(stage, previousStage);
     }
-  }, [onInitStageChange]);
+  }, []);
 
   useEffect(() => {
+    // Prevent double-mounting issues in React Strict Mode
+    if (mountedRef.current || connectingRef.current) {
+      return;
+    }
+    mountedRef.current = true;
+
     // Get match config from sessionStorage (set by MainMenu)
     const config = JSON.parse(sessionStorage.getItem('matchConfig') || 'null');
     if (config) {
@@ -29,14 +49,26 @@ const GameView = ({ onReturnToMenu, wsUrl, onInitStageChange, onInitComplete, on
     }
 
     return () => {
-      if (wsRef.current) {
+      // Only close if we're actually unmounting (not just Strict Mode re-run)
+      // Check if we have an active connection before closing
+      if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+        console.log('[WS] Closing WebSocket on unmount');
         wsRef.current.close();
       }
+      mountedRef.current = false;
     };
   }, []);
 
   const connectWebSocket = (config) => {
+    // Guard against multiple connection attempts
+    if (connectingRef.current || wsRef.current) {
+      console.log('[WS] Already connecting or connected, skipping');
+      return;
+    }
+    connectingRef.current = true;
+
     const clientId = Math.random().toString(36).substring(7);
+    console.log('[WS] Attempting connection to:', `${wsUrl}/ws/${clientId}`);
     
     let ws;
     try {
@@ -45,14 +77,16 @@ const GameView = ({ onReturnToMenu, wsUrl, onInitStageChange, onInitComplete, on
       const errorMsg = `Failed to create WebSocket connection: ${error.message}`;
       console.error('[WS] Connection error:', error);
       setWsError(errorMsg);
-      if (onInitError) {
-        onInitError(errorMsg);
+      connectingRef.current = false;
+      if (onInitErrorRef.current) {
+        onInitErrorRef.current(errorMsg);
       }
       return;
     }
 
     ws.onopen = () => {
       console.log('[WS] WebSocket connected');
+      connectingRef.current = false;
       setConnected(true);
       setMessage('Connected to server');
       setWsError(null);
@@ -76,8 +110,9 @@ const GameView = ({ onReturnToMenu, wsUrl, onInitStageChange, onInitComplete, on
       const errorMsg = 'WebSocket connection error. Check your network and try again.';
       setMessage('Connection error');
       setWsError(errorMsg);
-      if (onInitError && !initReportedRef.current) {
-        onInitError(errorMsg);
+      connectingRef.current = false;
+      if (onInitErrorRef.current && !initReportedRef.current) {
+        onInitErrorRef.current(errorMsg);
       }
     };
 
@@ -85,12 +120,13 @@ const GameView = ({ onReturnToMenu, wsUrl, onInitStageChange, onInitComplete, on
       console.log('[WS] WebSocket disconnected, code:', event.code);
       setConnected(false);
       setMessage('Disconnected from server');
+      connectingRef.current = false;
       
       // Only report error if this is an unexpected close during initialization
-      if (!initReportedRef.current && !gameState && onInitError) {
+      if (!initReportedRef.current && !gameState && onInitErrorRef.current) {
         const errorMsg = `WebSocket closed unexpectedly (code: ${event.code}). Please retry.`;
         setWsError(errorMsg);
-        onInitError(errorMsg);
+        onInitErrorRef.current(errorMsg);
       }
     };
 
@@ -114,10 +150,10 @@ const GameView = ({ onReturnToMenu, wsUrl, onInitStageChange, onInitComplete, on
         }
         
         // Report initialization complete on first game state
-        if (!initReportedRef.current && onInitComplete) {
+        if (!initReportedRef.current && onInitCompleteRef.current) {
           initReportedRef.current = true;
           reportStage('ready', 'waiting_server');
-          onInitComplete();
+          onInitCompleteRef.current();
         }
         break;
 
@@ -137,16 +173,16 @@ const GameView = ({ onReturnToMenu, wsUrl, onInitStageChange, onInitComplete, on
       case 'error':
         setMessage(`Error: ${data.message}`);
         console.error('[WS] Server error:', data.message);
-        if (onInitError && !initReportedRef.current) {
-          onInitError(`Server error: ${data.message}`);
+        if (onInitErrorRef.current && !initReportedRef.current) {
+          onInitErrorRef.current(`Server error: ${data.message}`);
         }
         break;
 
       case 'bot_error':
         setMessage(`Bot Error: ${data.message}`);
         console.error('[WS] Bot error:', data.message);
-        if (onInitError && !initReportedRef.current) {
-          onInitError(`Bot initialization failed: ${data.message}`);
+        if (onInitErrorRef.current && !initReportedRef.current) {
+          onInitErrorRef.current(`Bot initialization failed: ${data.message}`);
         }
         break;
 
